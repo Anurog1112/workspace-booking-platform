@@ -1,0 +1,127 @@
+Project workspace_booking_platform {
+  database_type: "PostgreSQL"
+  note: "Draft ERD for Capstone Project. Auth.js tables are not counted in the 5 required custom tables."
+}
+
+Enum user_role {
+  SUPER_ADMIN
+  STAFF
+  MEMBER
+}
+
+Enum room_status {
+  ACTIVE
+  MAINTENANCE
+  INACTIVE
+}
+
+Enum booking_status {
+  PENDING_PAYMENT
+  PENDING_REVIEW
+  CONFIRMED
+  REJECTED
+  CANCELLED
+  COMPLETED
+}
+
+Enum payment_status {
+  WAITING_UPLOAD
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+}
+
+Table profiles {
+  id uuid [pk]
+  auth_user_id text [unique, not null]
+  full_name text [not null]
+  phone text
+  role user_role [not null, default: "MEMBER"]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+Table branches {
+  id uuid [pk]
+  name text [not null]
+  address text [not null]
+  phone text
+  opening_time time [not null]
+  closing_time time [not null]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+Table rooms {
+  id uuid [pk]
+  branch_id uuid [not null]
+  name text [not null]
+  description text
+  capacity int [not null]
+  hourly_rate decimal [not null]
+  image_url text
+  status room_status [not null, default: "ACTIVE"]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+Table amenities {
+  id uuid [pk]
+  name text [not null, unique]
+  icon text
+  created_at timestamp [not null]
+}
+
+Table room_amenities {
+  room_id uuid [not null]
+  amenity_id uuid [not null]
+
+  indexes {
+    (room_id, amenity_id) [pk]
+  }
+}
+
+Table bookings {
+  id uuid [pk]
+  room_id uuid [not null]
+  member_id uuid [not null]
+  start_at timestamp [not null]
+  end_at timestamp [not null]
+  attendee_count int [not null]
+  total_price decimal [not null]
+  status booking_status [not null, default: "PENDING_PAYMENT"]
+  purpose text
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+Table payments {
+  id uuid [pk]
+  booking_id uuid [not null, unique]
+  amount decimal [not null]
+  proof_file_url text
+  status payment_status [not null, default: "WAITING_UPLOAD"]
+  reviewed_by uuid
+  reviewed_at timestamp
+  rejection_reason text
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+Table checkins {
+  id uuid [pk]
+  booking_id uuid [not null, unique]
+  checked_in_by uuid [not null]
+  checked_in_at timestamp [not null]
+  note text
+}
+
+Ref: rooms.branch_id > branches.id
+Ref: room_amenities.room_id > rooms.id
+Ref: room_amenities.amenity_id > amenities.id
+Ref: bookings.room_id > rooms.id
+Ref: bookings.member_id > profiles.id
+Ref: payments.booking_id > bookings.id
+Ref: payments.reviewed_by > profiles.id
+Ref: checkins.booking_id > bookings.id
+Ref: checkins.checked_in_by > profiles.id
