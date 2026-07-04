@@ -4,6 +4,27 @@ import { prisma } from "@/lib/prisma";
 import { BLOCKING_BOOKING_STATUSES } from "@/server/services/booking-service";
 import type { CreateRoomInput, RoomSearchInput, UpdateRoomInput } from "@/server/validators/room";
 
+export async function listBranches() {
+  return prisma.branch.findMany({
+    orderBy: { name: "asc" },
+  });
+}
+
+export async function listAmenities() {
+  return prisma.amenity.findMany({
+    orderBy: { name: "asc" },
+  });
+}
+
+export async function createAmenity(input: { name: string; icon?: string }) {
+  return prisma.amenity.create({
+    data: {
+      name: input.name,
+      icon: input.icon,
+    },
+  });
+}
+
 export async function listRooms(filters: RoomSearchInput = {}) {
   const where: Prisma.RoomWhereInput = {
     branchId: filters.branchId,
@@ -23,6 +44,20 @@ export async function listRooms(filters: RoomSearchInput = {}) {
 
   return prisma.room.findMany({
     where,
+    include: {
+      branch: true,
+      amenities: {
+        include: {
+          amenity: true,
+        },
+      },
+    },
+    orderBy: [{ branch: { name: "asc" } }, { name: "asc" }],
+  });
+}
+
+export async function listRoomsForAdmin() {
+  return prisma.room.findMany({
     include: {
       branch: true,
       amenities: {
