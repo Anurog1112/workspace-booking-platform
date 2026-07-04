@@ -6,22 +6,33 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint . --max-warnings=0",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit",
+    "verify": "npm run typecheck && npm run lint && npm run test",
+    "db:start": "docker start workspace-booking-postgres",
+    "db:stop": "docker stop workspace-booking-postgres",
+    "db:status": "docker ps -a --filter name=workspace-booking-postgres",
+    "supabase:start": "supabase start",
+    "supabase:stop": "supabase stop",
+    "supabase:status": "supabase status",
+    "supabase:reset": "supabase db reset",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
-    "prisma:studio": "prisma studio"
+    "prisma:deploy": "prisma migrate deploy",
+    "prisma:studio": "prisma studio",
+    "prisma:seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "latest",
     "@hookform/resolvers": "latest",
-    "@prisma/client": "latest",
+    "@prisma/client": "^6.19.0",
     "@supabase/supabase-js": "latest",
     "class-variance-authority": "latest",
     "clsx": "latest",
     "lucide-react": "latest",
     "next": "latest",
-    "next-auth": "latest",
+    "next-auth": "^5.0.0-beta.31",
     "react": "latest",
     "react-dom": "latest",
     "react-hook-form": "latest",
@@ -29,13 +40,19 @@
     "zod": "latest"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.2",
     "@types/node": "latest",
     "@types/react": "latest",
     "@types/react-dom": "latest",
     "eslint": "latest",
     "eslint-config-next": "latest",
-    "prisma": "latest",
+    "prisma": "^6.19.0",
     "tailwindcss": "latest",
-    "typescript": "latest"
+    "tsx": "latest",
+    "typescript": "latest",
+    "vitest": "^4.1.9"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   }
 }

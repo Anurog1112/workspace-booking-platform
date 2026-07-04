@@ -9,3 +9,5 @@ coverage
 *.log
 prisma/dev.db
 public/uploads
+tsconfig.tsbuildinfo
+*.tsbuildinfo

@@ -1,0 +1,2 @@
+-- Prisma demo data is seeded by `npm run prisma:seed`.
+-- This file is intentionally kept so `supabase db reset` has a stable seed target.
