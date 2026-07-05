@@ -17,9 +17,13 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  const secureCookie = request.nextUrl.protocol === "https:";
+  const cookieName = secureCookie ? "__Secure-authjs.session-token" : "authjs.session-token";
   const token = await getToken({
     req: request,
+    cookieName,
     secret: process.env.AUTH_SECRET,
+    secureCookie,
   });
 
   if (!token) {
