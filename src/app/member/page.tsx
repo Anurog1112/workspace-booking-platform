@@ -1,6 +1,10 @@
 import { BookingStatus, Role } from "@prisma/client";
-import { CalendarPlus, CreditCard, Search } from "lucide-react";
+import { CalendarPlus, CreditCard, Search, DoorOpen } from "lucide-react";
+import Link from "next/link";
 
+import { EmptyState } from "@/components/empty-state";
+import { PageHeader } from "@/components/page-header";
+import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -46,11 +50,12 @@ export default async function MemberPage({ searchParams }: { searchParams: Membe
   const [branches, rooms, bookings] = await Promise.all([listBranches(), listRooms(filters), listBookingsForMember(context.profile.id)]);
 
   return (
-    <main className="mx-auto min-h-screen max-w-6xl px-6 py-8">
-      <div className="mb-8">
-        <p className="text-sm text-muted-foreground">Member workspace</p>
-        <h1 className="mt-2 text-3xl font-semibold">Find and book a room</h1>
-      </div>
+    <div>
+      <PageHeader
+        eyebrow="Member workspace"
+        title="Find and book a room"
+        description="Search by branch, capacity, and time range. Confirmed and pending-review bookings are blocked from availability."
+      />
 
       {(params.created || params.paymentSubmitted || params.error) && (
         <div className="mb-6 rounded-md border bg-card px-4 py-3 text-sm">
@@ -109,100 +114,121 @@ export default async function MemberPage({ searchParams }: { searchParams: Membe
 
       <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
         <section className="space-y-4">
-          {rooms.map((room) => (
-            <Card key={room.id}>
-              <CardHeader>
-                <CardTitle>{room.name}</CardTitle>
-                <CardDescription>
-                  {room.branch.name} / {room.capacity} seats / {room.hourlyRate.toString()} THB/hour
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-sm text-muted-foreground">{room.description || "Ready for booking."}</p>
-                <div className="flex flex-wrap gap-2">
-                  {room.amenities.map(({ amenity }) => (
-                    <span className="rounded-md border px-2 py-1 text-xs" key={amenity.id}>
-                      {amenity.name}
-                    </span>
-                  ))}
-                </div>
-                <form action={createBookingAction} className="grid gap-3 md:grid-cols-2">
-                  <input name="roomId" type="hidden" value={room.id} />
-                  <div className="space-y-2">
-                    <Label htmlFor={`booking-start-${room.id}`}>Start</Label>
-                    <Input defaultValue={params.startAt} id={`booking-start-${room.id}`} name="startAt" required type="datetime-local" />
+          {rooms.length === 0 ? (
+            <EmptyState
+              icon={<DoorOpen className="h-10 w-10" aria-hidden="true" />}
+              title="No rooms match your search"
+              description="Try a different time range, branch, or attendee count."
+            />
+          ) : (
+            rooms.map((room) => (
+              <Card key={room.id}>
+                <CardHeader className="flex-row items-start justify-between gap-4 space-y-0">
+                  <div>
+                    <CardTitle>{room.name}</CardTitle>
+                    <CardDescription>
+                      {room.branch.name} / {room.capacity} seats / {room.hourlyRate.toString()} THB/hour
+                    </CardDescription>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor={`booking-end-${room.id}`}>End</Label>
-                    <Input defaultValue={params.endAt} id={`booking-end-${room.id}`} name="endAt" required type="datetime-local" />
+                  <Link className="text-sm font-medium text-primary" href={`/rooms/${room.id}`}>
+                    Details
+                  </Link>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-sm text-muted-foreground">{room.description || "Ready for booking."}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {room.amenities.map(({ amenity }) => (
+                      <span className="rounded-md border px-2 py-1 text-xs" key={amenity.id}>
+                        {amenity.name}
+                      </span>
+                    ))}
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor={`attendee-${room.id}`}>Attendees</Label>
-                    <Input id={`attendee-${room.id}`} max={room.capacity} min="1" name="attendeeCount" required type="number" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor={`purpose-${room.id}`}>Purpose</Label>
-                    <Input id={`purpose-${room.id}`} name="purpose" placeholder="Workshop, client meeting" />
-                  </div>
-                  <Button className="md:col-span-2" type="submit">
-                    <CalendarPlus className="mr-2 h-4 w-4" aria-hidden="true" />
-                    Book room
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-          ))}
+                  <form action={createBookingAction} className="grid gap-3 md:grid-cols-2">
+                    <input name="roomId" type="hidden" value={room.id} />
+                    <div className="space-y-2">
+                      <Label htmlFor={`booking-start-${room.id}`}>Start</Label>
+                      <Input defaultValue={params.startAt} id={`booking-start-${room.id}`} name="startAt" required type="datetime-local" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor={`booking-end-${room.id}`}>End</Label>
+                      <Input defaultValue={params.endAt} id={`booking-end-${room.id}`} name="endAt" required type="datetime-local" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor={`attendee-${room.id}`}>Attendees</Label>
+                      <Input id={`attendee-${room.id}`} max={room.capacity} min="1" name="attendeeCount" required type="number" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor={`purpose-${room.id}`}>Purpose</Label>
+                      <Input id={`purpose-${room.id}`} name="purpose" placeholder="Workshop, client meeting" />
+                    </div>
+                    <Button className="md:col-span-2" type="submit">
+                      <CalendarPlus className="mr-2 h-4 w-4" aria-hidden="true" />
+                      Book room
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+            ))
+          )}
         </section>
 
         <aside className="space-y-4">
           <h2 className="text-xl font-semibold">My bookings</h2>
-          {bookings.map((booking) => (
-            <Card key={booking.id}>
-              <CardHeader>
-                <CardTitle className="text-base">{booking.room.name}</CardTitle>
-                <CardDescription>
-                  {formatDateTime(booking.startAt)} - {formatDateTime(booking.endAt)}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <span className="text-muted-foreground">Status</span>
-                  <span className="font-medium">{booking.status}</span>
-                  <span className="text-muted-foreground">Payment</span>
-                  <span className="font-medium">{booking.payment?.status ?? "N/A"}</span>
-                  <span className="text-muted-foreground">Amount</span>
-                  <span className="font-medium">{booking.totalPrice.toString()} THB</span>
-                  <span className="text-muted-foreground">Due</span>
-                  <span className="font-medium">{formatDateTime(booking.paymentDueAt)}</span>
-                </div>
+          {bookings.length === 0 ? (
+            <EmptyState title="No bookings yet" description="Search for a room and create your first booking." />
+          ) : (
+            bookings.map((booking) => (
+              <Card key={booking.id}>
+                <CardHeader>
+                  <CardTitle className="text-base">
+                    <Link className="hover:text-primary" href={`/bookings/${booking.id}`}>
+                      {booking.room.name}
+                    </Link>
+                  </CardTitle>
+                  <CardDescription>
+                    {formatDateTime(booking.startAt)} - {formatDateTime(booking.endAt)}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <span className="text-muted-foreground">Status</span>
+                    <StatusBadge status={booking.status} />
+                    <span className="text-muted-foreground">Payment</span>
+                    {booking.payment ? <StatusBadge status={booking.payment.status} /> : <span className="font-medium">N/A</span>}
+                    <span className="text-muted-foreground">Amount</span>
+                    <span className="font-medium">{booking.totalPrice.toString()} THB</span>
+                    <span className="text-muted-foreground">Due</span>
+                    <span className="font-medium">{formatDateTime(booking.paymentDueAt)}</span>
+                  </div>
 
-                {payableStatuses.has(booking.status) && (
-                  <form action={submitPaymentProofAction} className="space-y-3">
-                    <input name="bookingId" type="hidden" value={booking.id} />
-                    <div className="space-y-2">
-                      <Label htmlFor={`proof-${booking.id}`}>Payment proof URL</Label>
-                      <Input id={`proof-${booking.id}`} name="proofFileUrl" placeholder="https://..." required type="url" />
-                    </div>
-                    <Button className="w-full" type="submit" variant="secondary">
-                      <CreditCard className="mr-2 h-4 w-4" aria-hidden="true" />
-                      Submit proof
-                    </Button>
-                  </form>
-                )}
+                  {payableStatuses.has(booking.status) && (
+                    <form action={submitPaymentProofAction} className="space-y-3" encType="multipart/form-data">
+                      <input name="bookingId" type="hidden" value={booking.id} />
+                      <div className="space-y-2">
+                        <Label htmlFor={`proof-${booking.id}`}>Payment proof</Label>
+                        <Input accept="image/jpeg,image/png,image/webp,application/pdf" id={`proof-${booking.id}`} name="proofFile" required type="file" />
+                      </div>
+                      <Button className="w-full" type="submit" variant="secondary">
+                        <CreditCard className="mr-2 h-4 w-4" aria-hidden="true" />
+                        Submit proof
+                      </Button>
+                    </form>
+                  )}
 
-                {cancellableStatuses.has(booking.status) && (
-                  <form action={cancelBookingAction}>
-                    <input name="bookingId" type="hidden" value={booking.id} />
-                    <Button className="w-full" type="submit" variant="ghost">
-                      Cancel booking
-                    </Button>
-                  </form>
-                )}
-              </CardContent>
-            </Card>
-          ))}
+                  {cancellableStatuses.has(booking.status) && (
+                    <form action={cancelBookingAction}>
+                      <input name="bookingId" type="hidden" value={booking.id} />
+                      <Button className="w-full" type="submit" variant="ghost">
+                        Cancel booking
+                      </Button>
+                    </form>
+                  )}
+                </CardContent>
+              </Card>
+            ))
+          )}
         </aside>
       </div>
-    </main>
+    </div>
   );
 }

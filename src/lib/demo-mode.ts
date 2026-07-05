@@ -16,7 +16,7 @@ function daysFromNow(days: number, hour: number) {
   return date;
 }
 
-const demoUsers = [
+export const demoUsers = [
   {
     userId: "demo-user-super-admin",
     profileId: "demo-profile-super-admin",

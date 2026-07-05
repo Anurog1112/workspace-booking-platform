@@ -3,6 +3,8 @@ import { CalendarClock, DoorOpen, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { PageHeader } from "@/components/page-header";
+import { StatusBadge } from "@/components/status-badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { auth } from "@/lib/auth";
 import { demoBookings, demoRooms, isDemoMode } from "@/lib/demo-mode";
@@ -39,15 +41,16 @@ export default async function DashboardPage() {
         prisma.room.count({ where: { status: RoomStatus.ACTIVE } }),
         prisma.payment.count({ where: { status: PaymentStatus.PENDING_REVIEW } }),
         prisma.booking.count({ where: { status: BookingStatus.CONFIRMED } }),
-      ]);
+  ]);
 
   return (
-    <main className="mx-auto min-h-screen max-w-5xl px-6 py-8">
-      <div className="mb-8">
-        <p className="text-sm text-muted-foreground">Signed in as {session.user.email}</p>
-        <h1 className="mt-2 text-3xl font-semibold">Dashboard</h1>
-        <p className="mt-2 text-muted-foreground">Role: {role}</p>
-      </div>
+    <div>
+      <PageHeader
+        eyebrow="Workspace overview"
+        title="Dashboard"
+        description={`Signed in as ${session.user.email}`}
+        actions={<StatusBadge status={role} />}
+      />
       <section className="mb-6 grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader>
@@ -84,6 +87,6 @@ export default async function DashboardPage() {
           </Link>
         ))}
       </div>
-    </main>
+    </div>
   );
 }

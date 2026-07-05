@@ -8,6 +8,7 @@ import { z } from "zod";
 import { requireRole } from "@/server/guards";
 import { cancelOwnPendingBooking, createBooking } from "@/server/services/booking-service";
 import { submitPaymentProof } from "@/server/services/payment-service";
+import { uploadPaymentProof } from "@/server/services/upload-service";
 import { createBookingSchema } from "@/server/validators/booking";
 import { submitPaymentProofSchema } from "@/server/validators/payment";
 
@@ -46,9 +47,13 @@ export async function submitPaymentProofAction(formData: FormData) {
   let target = "/member?paymentSubmitted=1";
 
   try {
+    const proofFile = formData.get("proofFile");
+    const proofFileUrl =
+      proofFile instanceof File && proofFile.size > 0 ? await uploadPaymentProof(proofFile, context.profile.id) : formData.get("proofFileUrl");
+
     const parsed = submitPaymentProofSchema.parse({
       bookingId: formData.get("bookingId"),
-      proofFileUrl: formData.get("proofFileUrl"),
+      proofFileUrl,
     });
 
     await submitPaymentProof(context.profile.id, parsed);

@@ -5,6 +5,7 @@ import { NextResponse, type NextRequest } from "next/server";
 const protectedRoutes: Array<{ prefix: string; roles: Role[] }> = [
   { prefix: "/dashboard", roles: ["MEMBER", "STAFF", "SUPER_ADMIN"] },
   { prefix: "/member", roles: ["MEMBER", "STAFF", "SUPER_ADMIN"] },
+  { prefix: "/bookings", roles: ["MEMBER", "STAFF", "SUPER_ADMIN"] },
   { prefix: "/staff", roles: ["STAFF", "SUPER_ADMIN"] },
   { prefix: "/admin", roles: ["SUPER_ADMIN"] },
 ];
@@ -40,5 +41,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/member/:path*", "/staff/:path*", "/admin/:path*"],
+  matcher: ["/dashboard/:path*", "/member/:path*", "/bookings/:path*", "/staff/:path*", "/admin/:path*"],
 };

@@ -1,6 +1,10 @@
 import { PaymentStatus, Role } from "@prisma/client";
 import { Check, ExternalLink, X } from "lucide-react";
+import Link from "next/link";
 
+import { EmptyState } from "@/components/empty-state";
+import { PageHeader } from "@/components/page-header";
+import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -25,11 +29,12 @@ export default async function StaffPage() {
   const otherBookings = bookings.filter((booking) => booking.payment?.status !== PaymentStatus.PENDING_REVIEW).slice(0, 8);
 
   return (
-    <main className="mx-auto min-h-screen max-w-6xl px-6 py-8">
-      <div className="mb-8">
-        <p className="text-sm text-muted-foreground">Staff workspace</p>
-        <h1 className="mt-2 text-3xl font-semibold">Payment review</h1>
-      </div>
+    <div>
+      <PageHeader
+        eyebrow="Staff workspace"
+        title="Payment review"
+        description="Review uploaded proof, approve valid payments, and reject unclear or incorrect submissions."
+      />
 
       <section className="mb-8 grid gap-4 md:grid-cols-3">
         <Card>
@@ -56,7 +61,11 @@ export default async function StaffPage() {
         {pendingReviews.map((booking) => (
           <Card key={booking.id}>
             <CardHeader>
-              <CardTitle>{booking.room.name}</CardTitle>
+              <CardTitle>
+                <Link className="hover:text-primary" href={`/bookings/${booking.id}`}>
+                  {booking.room.name}
+                </Link>
+              </CardTitle>
               <CardDescription>
                 {booking.member.fullName} / {booking.room.branch.name} / {formatDateTime(booking.startAt)} - {formatDateTime(booking.endAt)}
               </CardDescription>
@@ -73,11 +82,11 @@ export default async function StaffPage() {
                 </div>
                 <div>
                   <p className="text-muted-foreground">Booking status</p>
-                  <p className="font-medium">{booking.status}</p>
+                  <StatusBadge status={booking.status} />
                 </div>
                 <div>
                   <p className="text-muted-foreground">Payment status</p>
-                  <p className="font-medium">{booking.payment?.status}</p>
+                  {booking.payment ? <StatusBadge status={booking.payment.status} /> : <p className="font-medium">N/A</p>}
                 </div>
               </div>
 
@@ -120,9 +129,7 @@ export default async function StaffPage() {
         ))}
 
         {pendingReviews.length === 0 && (
-          <Card>
-            <CardContent className="p-6 text-sm text-muted-foreground">No payments are waiting for review.</CardContent>
-          </Card>
+          <EmptyState title="No payments are waiting for review" description="New payment proof submissions will appear in this queue." />
         )}
       </section>
 
@@ -132,16 +139,18 @@ export default async function StaffPage() {
           {otherBookings.map((booking) => (
             <Card key={booking.id}>
               <CardContent className="grid gap-2 p-4 text-sm md:grid-cols-5">
-                <span className="font-medium">{booking.room.name}</span>
+                <Link className="font-medium hover:text-primary" href={`/bookings/${booking.id}`}>
+                  {booking.room.name}
+                </Link>
                 <span>{booking.member.fullName}</span>
                 <span>{formatDateTime(booking.startAt)}</span>
-                <span>{booking.status}</span>
-                <span>{booking.payment?.status ?? "N/A"}</span>
+                <StatusBadge status={booking.status} />
+                {booking.payment ? <StatusBadge status={booking.payment.status} /> : <span>N/A</span>}
               </CardContent>
             </Card>
           ))}
         </div>
       </section>
-    </main>
+    </div>
   );
 }

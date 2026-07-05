@@ -1,6 +1,10 @@
 import { Building2, Plus, Settings2 } from "lucide-react";
 import { Role, RoomStatus } from "@prisma/client";
+import Link from "next/link";
 
+import { EmptyState } from "@/components/empty-state";
+import { PageHeader } from "@/components/page-header";
+import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -17,16 +21,28 @@ export default async function AdminPage() {
   const [branches, amenities, rooms] = await Promise.all([listBranches(), listAmenities(), listRoomsForAdmin()]);
 
   return (
-    <main className="mx-auto min-h-screen max-w-6xl px-6 py-8">
-      <div className="mb-8 flex flex-col gap-2">
-        <p className="text-sm text-muted-foreground">Admin workspace</p>
-        <h1 className="text-3xl font-semibold">Rooms and amenities</h1>
-      </div>
+    <div>
+      <PageHeader
+        eyebrow="Admin workspace"
+        title="Rooms and amenities"
+        description="Manage bookable rooms, room status, pricing, and amenity metadata."
+        actions={
+          <Link
+            className="inline-flex h-10 items-center justify-center rounded-md border border-border bg-card px-4 text-sm font-medium hover:bg-muted"
+            href="/admin/users"
+          >
+            Manage users
+          </Link>
+        }
+      />
 
       <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
         <section className="space-y-4">
-          {rooms.map((room) => (
-            <Card key={room.id}>
+          {rooms.length === 0 ? (
+            <EmptyState title="No rooms yet" description="Create the first room from the form on the right." />
+          ) : (
+            rooms.map((room) => (
+              <Card key={room.id}>
               <CardHeader className="flex-row items-start justify-between gap-4 space-y-0">
                 <div>
                   <CardTitle className="flex items-center gap-2">
@@ -37,7 +53,7 @@ export default async function AdminPage() {
                     {room.branch.name} / {room.capacity} seats / {room.hourlyRate.toString()} THB/hour
                   </CardDescription>
                 </div>
-                <span className="rounded-md bg-muted px-2 py-1 text-xs font-medium">{room.status}</span>
+                <StatusBadge status={room.status} />
               </CardHeader>
               <CardContent className="space-y-4">
                 <p className="text-sm text-muted-foreground">{room.description || "No description"}</p>
@@ -71,8 +87,9 @@ export default async function AdminPage() {
                   </Button>
                 </form>
               </CardContent>
-            </Card>
-          ))}
+              </Card>
+            ))
+          )}
         </section>
 
         <aside className="space-y-6">
@@ -161,6 +178,6 @@ export default async function AdminPage() {
           </Card>
         </aside>
       </div>
-    </main>
+    </div>
   );
 }

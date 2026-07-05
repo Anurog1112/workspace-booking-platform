@@ -1,4 +1,4 @@
-import { BookingStatus, PaymentStatus, Prisma, PrismaClient, RoomStatus } from "@prisma/client";
+import { BookingStatus, PaymentStatus, Prisma, PrismaClient, RoomStatus, type Role } from "@prisma/client";
 
 import { createDemoBooking, demoBookings, getDemoBookingsForMember, isDemoMode } from "@/lib/demo-mode";
 import { prisma } from "@/lib/prisma";
@@ -10,8 +10,7 @@ const MS_PER_HOUR = 1000 * 60 * 60;
 const PAYMENT_WINDOW_MINUTES = 30;
 const PAYMENT_WINDOW_MS = PAYMENT_WINDOW_MINUTES * 60 * 1000;
 
-export const BLOCKING_BOOKING_STATUSES = [
-  BookingStatus.PENDING_PAYMENT,
+export const BLOCKING_BOOKING_STATUSES: BookingStatus[] = [
   BookingStatus.PENDING_REVIEW,
   BookingStatus.CONFIRMED,
 ];
@@ -184,6 +183,55 @@ export async function listBookingsForMember(memberId: string) {
       checkin: true,
     },
     orderBy: { startAt: "desc" },
+  });
+}
+
+export async function getBookingForProfile(input: { bookingId: string; profileId: string; role: Role }) {
+  if (isDemoMode) {
+    return demoBookings.find((booking) => booking.id === input.bookingId && (booking.memberId === input.profileId || input.role !== "MEMBER")) ?? null;
+  }
+
+  return prisma.booking.findFirst({
+    where: {
+      id: input.bookingId,
+      memberId: input.role === "MEMBER" ? input.profileId : undefined,
+    },
+    include: {
+      member: true,
+      room: {
+        include: {
+          branch: true,
+          amenities: {
+            include: {
+              amenity: true,
+            },
+          },
+        },
+      },
+      payment: true,
+      checkin: true,
+    },
+  });
+}
+
+export async function listUpcomingBookingsForRoom(roomId: string) {
+  if (isDemoMode) {
+    return demoBookings
+      .filter((booking) => booking.roomId === roomId && BLOCKING_BOOKING_STATUSES.includes(booking.status))
+      .sort((a, b) => a.startAt.getTime() - b.startAt.getTime());
+  }
+
+  return prisma.booking.findMany({
+    where: {
+      roomId,
+      status: { in: BLOCKING_BOOKING_STATUSES },
+      endAt: { gte: new Date() },
+    },
+    include: {
+      payment: true,
+    },
+    orderBy: { startAt: "asc" },
+    take: 8,
   });
 }
 

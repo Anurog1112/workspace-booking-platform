@@ -1,4 +1,5 @@
 import { Building2, LogIn } from "lucide-react";
+import Link from "next/link";
 
 import { loginAction } from "@/app/login/actions";
 import { Button } from "@/components/ui/button";
@@ -9,12 +10,14 @@ import { Label } from "@/components/ui/label";
 type LoginPageProps = {
   searchParams?: Promise<{
     error?: string;
+    registered?: string;
   }>;
 };
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const params = await searchParams;
   const hasError = params?.error === "CredentialsSignin";
+  const registered = params?.registered === "1";
 
   return (
     <main className="flex min-h-screen items-center justify-center px-4 py-10">
@@ -36,12 +39,19 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
               <Label htmlFor="password">Password</Label>
               <Input id="password" name="password" type="password" autoComplete="current-password" defaultValue="Password123!" required />
             </div>
+            {registered ? <p className="rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-700">Account created. Sign in to continue.</p> : null}
             {hasError ? <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">Invalid email or password.</p> : null}
             <Button className="w-full gap-2" type="submit">
               <LogIn className="h-4 w-4" aria-hidden="true" />
               Sign in
             </Button>
           </form>
+          <p className="mt-4 text-center text-sm text-muted-foreground">
+            New member?{" "}
+            <Link className="font-medium text-primary" href="/register">
+              Create an account
+            </Link>
+          </p>
           <div className="mt-4 rounded-md bg-muted p-3 text-xs text-muted-foreground">
             Demo accounts: superadmin@example.com, staff@example.com, member@example.com
           </div>

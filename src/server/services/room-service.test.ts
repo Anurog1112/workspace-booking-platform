@@ -54,7 +54,7 @@ describe("room-service", () => {
               startAt: { lt: endAt },
               endAt: { gt: startAt },
               status: {
-                in: [BookingStatus.PENDING_PAYMENT, BookingStatus.PENDING_REVIEW, BookingStatus.CONFIRMED],
+                in: [BookingStatus.PENDING_REVIEW, BookingStatus.CONFIRMED],
               },
             },
           },
