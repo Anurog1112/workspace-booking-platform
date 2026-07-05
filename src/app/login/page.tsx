@@ -52,9 +52,6 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
               Create an account
             </Link>
           </p>
-          <div className="mt-4 rounded-md bg-muted p-3 text-xs text-muted-foreground">
-            Demo accounts: superadmin@example.com, staff@example.com, member@example.com
-          </div>
         </CardContent>
       </Card>
     </main>
