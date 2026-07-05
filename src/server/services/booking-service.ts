@@ -1,5 +1,6 @@
 import { BookingStatus, PaymentStatus, Prisma, PrismaClient, RoomStatus, type Role } from "@prisma/client";
 
+import { getBranchDateTimeMinutes, getBranchTimeMinutes, isSameBranchDate } from "@/lib/branch-time";
 import { createDemoBooking, demoBookings, getDemoBookingsForMember, isDemoMode } from "@/lib/demo-mode";
 import { prisma } from "@/lib/prisma";
 import type { CreateBookingInput } from "@/server/validators/booking";
@@ -40,7 +41,7 @@ function assertValidBookingTimeRange(input: { startAt: Date; endAt: Date }) {
     throw new BookingValidationError("Booking end time must be after start time.");
   }
 
-  if (!isSameUtcDate(input.startAt, input.endAt)) {
+  if (!isSameBranchDate(input.startAt, input.endAt)) {
     throw new BookingValidationError("Booking must start and end on the same day.");
   }
 
@@ -49,23 +50,11 @@ function assertValidBookingTimeRange(input: { startAt: Date; endAt: Date }) {
   }
 }
 
-function getUtcMinutesSinceMidnight(date: Date) {
-  return date.getUTCHours() * 60 + date.getUTCMinutes();
-}
-
-function isSameUtcDate(startAt: Date, endAt: Date) {
-  return (
-    startAt.getUTCFullYear() === endAt.getUTCFullYear() &&
-    startAt.getUTCMonth() === endAt.getUTCMonth() &&
-    startAt.getUTCDate() === endAt.getUTCDate()
-  );
-}
-
 function assertBookingWithinBranchHours(input: { startAt: Date; endAt: Date }, branch: { openingTime: Date; closingTime: Date }) {
-  const bookingStart = getUtcMinutesSinceMidnight(input.startAt);
-  const bookingEnd = getUtcMinutesSinceMidnight(input.endAt);
-  const opening = getUtcMinutesSinceMidnight(branch.openingTime);
-  const closing = getUtcMinutesSinceMidnight(branch.closingTime);
+  const bookingStart = getBranchDateTimeMinutes(input.startAt);
+  const bookingEnd = getBranchDateTimeMinutes(input.endAt);
+  const opening = getBranchTimeMinutes(branch.openingTime);
+  const closing = getBranchTimeMinutes(branch.closingTime);
 
   if (bookingStart < opening || bookingEnd > closing) {
     throw new BookingValidationError("Booking time must be within branch opening hours.");

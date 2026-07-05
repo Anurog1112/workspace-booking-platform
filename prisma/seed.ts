@@ -202,6 +202,7 @@ async function main() {
         description: "Small private room for focused discussion.",
         capacity: 4,
         hourlyRate: 250,
+        imageUrl: "https://images.unsplash.com/photo-1497366811353-6870744d04b2?auto=format&fit=crop&w=1200&q=80",
         amenityNames: ["Wi-Fi", "Whiteboard", "Power Outlet", "Air Conditioning"],
       },
       {
@@ -209,6 +210,7 @@ async function main() {
         description: "Standard meeting room for team collaboration.",
         capacity: 8,
         hourlyRate: 450,
+        imageUrl: "https://images.unsplash.com/photo-1517502884422-41eaead166d4?auto=format&fit=crop&w=1200&q=80",
         amenityNames: ["Projector", "Whiteboard", "Wi-Fi", "Video Conference", "Air Conditioning"],
       },
       {
@@ -216,6 +218,7 @@ async function main() {
         description: "Large room for workshop and training sessions.",
         capacity: 20,
         hourlyRate: 900,
+        imageUrl: "https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&w=1200&q=80",
         amenityNames: ["Projector", "Whiteboard", "Wi-Fi", "Power Outlet", "Air Conditioning"],
       },
     ].map(async (room) => {
@@ -230,6 +233,7 @@ async function main() {
           description: room.description,
           capacity: room.capacity,
           hourlyRate: room.hourlyRate,
+          imageUrl: room.imageUrl,
           status: RoomStatus.ACTIVE,
         },
         create: {
@@ -238,6 +242,7 @@ async function main() {
           description: room.description,
           capacity: room.capacity,
           hourlyRate: room.hourlyRate,
+          imageUrl: room.imageUrl,
           status: RoomStatus.ACTIVE,
         },
       });

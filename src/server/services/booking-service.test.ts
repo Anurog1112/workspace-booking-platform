@@ -43,6 +43,14 @@ describe("booking-service", () => {
     return date;
   }
 
+  function futureBranchDate(daysFromNow: number, hour: number) {
+    const date = new Date();
+    date.setUTCDate(date.getUTCDate() + daysFromNow);
+    const datePart = date.toISOString().slice(0, 10);
+
+    return new Date(`${datePart}T${String(hour).padStart(2, "0")}:00:00+07:00`);
+  }
+
   function branchHours(openHour = 8, closeHour = 20) {
     return {
       openingTime: new Date(`1970-01-01T${String(openHour).padStart(2, "0")}:00:00.000Z`),
@@ -127,8 +135,8 @@ describe("booking-service", () => {
 
     await createBooking("member_1", {
       roomId: "room_1",
-      startAt: futureUtcDate(2, 9),
-      endAt: futureUtcDate(2, 11),
+      startAt: futureBranchDate(2, 9),
+      endAt: futureBranchDate(2, 11),
       attendeeCount: 6,
       purpose: "Planning",
     });
@@ -143,8 +151,8 @@ describe("booking-service", () => {
     await expect(
       createBooking("member_1", {
         roomId: "room_1",
-        startAt: futureUtcDate(2, 11),
-        endAt: futureUtcDate(2, 9),
+        startAt: futureBranchDate(2, 11),
+        endAt: futureBranchDate(2, 9),
         attendeeCount: 2,
       }),
     ).rejects.toBeInstanceOf(BookingValidationError);
@@ -170,8 +178,8 @@ describe("booking-service", () => {
     await expect(
       createBooking("member_1", {
         roomId: "room_1",
-        startAt: futureUtcDate(2, 19),
-        endAt: futureUtcDate(3, 9),
+        startAt: futureBranchDate(2, 19),
+        endAt: futureBranchDate(3, 9),
         attendeeCount: 2,
       }),
     ).rejects.toBeInstanceOf(BookingValidationError);
@@ -189,8 +197,8 @@ describe("booking-service", () => {
     await expect(
       createBooking("member_1", {
         roomId: "room_1",
-        startAt: futureUtcDate(2, 9),
-        endAt: futureUtcDate(2, 10),
+        startAt: futureBranchDate(2, 9),
+        endAt: futureBranchDate(2, 10),
         attendeeCount: 2,
       }),
     ).rejects.toBeInstanceOf(BookingValidationError);
@@ -207,8 +215,8 @@ describe("booking-service", () => {
     await expect(
       createBooking("member_1", {
         roomId: "room_1",
-        startAt: futureUtcDate(2, 9),
-        endAt: futureUtcDate(2, 10),
+        startAt: futureBranchDate(2, 9),
+        endAt: futureBranchDate(2, 10),
         attendeeCount: 5,
       }),
     ).rejects.toBeInstanceOf(BookingValidationError);
@@ -226,8 +234,8 @@ describe("booking-service", () => {
     await expect(
       createBooking("member_1", {
         roomId: "room_1",
-        startAt: futureUtcDate(2, 7),
-        endAt: futureUtcDate(2, 9),
+        startAt: futureBranchDate(2, 7),
+        endAt: futureBranchDate(2, 9),
         attendeeCount: 2,
       }),
     ).rejects.toBeInstanceOf(BookingValidationError);

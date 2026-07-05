@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
+import { combineBranchDateTime } from "@/lib/branch-time";
 import { requireRole } from "@/server/guards";
 import { cancelOwnPendingBooking, createBooking } from "@/server/services/booking-service";
 import { submitPaymentProof } from "@/server/services/payment-service";
@@ -20,15 +21,34 @@ function getActionErrorMessage(error: unknown) {
   return "The action could not be completed.";
 }
 
+function getBookingDateRange(formData: FormData) {
+  const bookingDate = formData.get("bookingDate");
+  const startTime = formData.get("startTime");
+  const endTime = formData.get("endTime");
+
+  if (typeof bookingDate === "string" && typeof startTime === "string" && typeof endTime === "string" && bookingDate && startTime && endTime) {
+    return {
+      startAt: combineBranchDateTime(bookingDate, startTime),
+      endAt: combineBranchDateTime(bookingDate, endTime),
+    };
+  }
+
+  return {
+    startAt: formData.get("startAt"),
+    endAt: formData.get("endAt"),
+  };
+}
+
 export async function createBookingAction(formData: FormData) {
   const context = await requireRole([Role.MEMBER, Role.STAFF, Role.SUPER_ADMIN]);
   let target = "/member?created=1";
 
   try {
+    const dateRange = getBookingDateRange(formData);
     const parsed = createBookingSchema.parse({
       roomId: formData.get("roomId"),
-      startAt: formData.get("startAt"),
-      endAt: formData.get("endAt"),
+      startAt: dateRange.startAt,
+      endAt: dateRange.endAt,
       attendeeCount: formData.get("attendeeCount"),
       purpose: formData.get("purpose") || undefined,
     });

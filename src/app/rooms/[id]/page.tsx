@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { auth } from "@/lib/auth";
+import { buildHourlyTimeOptions, formatBranchTime } from "@/lib/branch-time";
 import { listUpcomingBookingsForRoom } from "@/server/services/booking-service";
 import { getRoomById } from "@/server/services/room-service";
 
@@ -26,6 +27,13 @@ function formatDateTime(date: Date) {
     timeStyle: "short",
     timeZone: "Asia/Bangkok",
   }).format(date);
+}
+
+function getDefaultBookingDate() {
+  const date = new Date();
+  date.setDate(date.getDate() + 1);
+
+  return date.toISOString().slice(0, 10);
 }
 
 export default async function RoomDetailPage({ params }: RoomDetailPageProps) {
@@ -70,6 +78,9 @@ export default async function RoomDetailPage({ params }: RoomDetailPageProps) {
               <div className="rounded-md bg-muted p-4">
                 <p className="text-muted-foreground">Branch</p>
                 <p className="font-semibold">{room.branch.name}</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Open {formatBranchTime(room.branch.openingTime)} - {formatBranchTime(room.branch.closingTime)}
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -120,12 +131,32 @@ export default async function RoomDetailPage({ params }: RoomDetailPageProps) {
                 <form action={createBookingAction} className="space-y-4">
                   <input name="roomId" type="hidden" value={room.id} />
                   <div className="space-y-2">
-                    <Label htmlFor="startAt">Start</Label>
-                    <Input id="startAt" name="startAt" required type="datetime-local" />
+                    <Label htmlFor="bookingDate">Date</Label>
+                    <Input defaultValue={getDefaultBookingDate()} id="bookingDate" name="bookingDate" required type="date" />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="endAt">End</Label>
-                    <Input id="endAt" name="endAt" required type="datetime-local" />
+                    <Label htmlFor="startTime">Start</Label>
+                    <select className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm" defaultValue="09:00" id="startTime" name="startTime" required>
+                      {buildHourlyTimeOptions(room.branch.openingTime, room.branch.closingTime)
+                        .slice(0, -1)
+                        .map((time) => (
+                          <option key={time} value={time}>
+                            {time}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="endTime">End</Label>
+                    <select className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm" defaultValue="10:00" id="endTime" name="endTime" required>
+                      {buildHourlyTimeOptions(room.branch.openingTime, room.branch.closingTime)
+                        .slice(1)
+                        .map((time) => (
+                          <option key={time} value={time}>
+                            {time}
+                          </option>
+                        ))}
+                    </select>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="attendeeCount">Attendees</Label>

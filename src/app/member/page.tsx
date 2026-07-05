@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { buildHourlyTimeOptions, combineBranchDateTime, formatBranchTime } from "@/lib/branch-time";
 import { requireRole } from "@/server/guards";
 import { listBookingsForMember } from "@/server/services/booking-service";
 import { listBranches, listRooms } from "@/server/services/room-service";
@@ -24,6 +25,9 @@ type MemberSearchParams = Promise<{
   capacity?: string;
   startAt?: string;
   endAt?: string;
+  bookingDate?: string;
+  startTime?: string;
+  endTime?: string;
   created?: string;
   paymentSubmitted?: string;
   cancelled?: string;
@@ -41,17 +45,45 @@ function formatDateTime(date: Date) {
   }).format(date);
 }
 
+function getDefaultBookingDate() {
+  const date = new Date();
+  date.setDate(date.getDate() + 1);
+
+  return date.toISOString().slice(0, 10);
+}
+
+function buildDateRange(params: Awaited<MemberSearchParams>) {
+  if (params.bookingDate && params.startTime && params.endTime) {
+    return {
+      startAt: combineBranchDateTime(params.bookingDate, params.startTime),
+      endAt: combineBranchDateTime(params.bookingDate, params.endTime),
+    };
+  }
+
+  return {
+    startAt: params.startAt,
+    endAt: params.endAt,
+  };
+}
+
+function getSearchTimeOptions() {
+  return Array.from({ length: 13 }, (_, index) => `${String(index + 8).padStart(2, "0")}:00`);
+}
+
 export default async function MemberPage({ searchParams }: { searchParams: MemberSearchParams }) {
   const context = await requireRole([Role.MEMBER, Role.STAFF, Role.SUPER_ADMIN]);
   const params = await searchParams;
+  const dateRange = buildDateRange(params);
   const parsedFilters = roomSearchSchema.safeParse({
     branchId: params.branchId || undefined,
     capacity: params.capacity || undefined,
-    startAt: params.startAt || undefined,
-    endAt: params.endAt || undefined,
+    startAt: dateRange.startAt || undefined,
+    endAt: dateRange.endAt || undefined,
   });
   const filters = parsedFilters.success ? parsedFilters.data : {};
   const [branches, rooms, bookings] = await Promise.all([listBranches(), listRooms(filters), listBookingsForMember(context.profile.id)]);
+  const defaultBookingDate = params.bookingDate ?? getDefaultBookingDate();
+  const searchTimeOptions = getSearchTimeOptions();
   const notice = params.error
     ? { type: "error" as const, message: decodeURIComponent(params.error) }
     : params.created
@@ -81,7 +113,7 @@ export default async function MemberPage({ searchParams }: { searchParams: Membe
           <CardDescription>Filtering by time also excludes rooms with blocking bookings.</CardDescription>
         </CardHeader>
         <CardContent>
-          <form className="grid gap-4 md:grid-cols-5" method="get">
+          <form className="grid gap-4 md:grid-cols-6" method="get">
             <div className="space-y-2">
               <Label htmlFor="branchId">Branch</Label>
               <select
@@ -103,12 +135,28 @@ export default async function MemberPage({ searchParams }: { searchParams: Membe
               <Input defaultValue={params.capacity} id="capacity" min="1" name="capacity" type="number" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="startAt">Start</Label>
-              <Input defaultValue={params.startAt} id="startAt" name="startAt" type="datetime-local" />
+              <Label htmlFor="bookingDate">Date</Label>
+              <Input defaultValue={defaultBookingDate} id="bookingDate" name="bookingDate" type="date" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="endAt">End</Label>
-              <Input defaultValue={params.endAt} id="endAt" name="endAt" type="datetime-local" />
+              <Label htmlFor="startTime">Start</Label>
+              <select className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm" defaultValue={params.startTime ?? "09:00"} id="startTime" name="startTime">
+                {searchTimeOptions.slice(0, -1).map((time) => (
+                  <option key={time} value={time}>
+                    {time}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="endTime">End</Label>
+              <select className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm" defaultValue={params.endTime ?? "10:00"} id="endTime" name="endTime">
+                {searchTimeOptions.slice(1).map((time) => (
+                  <option key={time} value={time}>
+                    {time}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="flex items-end">
               <Button className="w-full" type="submit">
@@ -145,7 +193,13 @@ export default async function MemberPage({ searchParams }: { searchParams: Membe
                   </Link>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <p className="text-sm text-muted-foreground">{room.description || "Ready for booking."}</p>
+                  <div className="grid gap-2 text-sm text-muted-foreground sm:grid-cols-3">
+                    <p>{room.description || "Ready for booking."}</p>
+                    <p>
+                      Open {formatBranchTime(room.branch.openingTime)} - {formatBranchTime(room.branch.closingTime)}
+                    </p>
+                    <p>{room.hourlyRate.toString()} THB/hour</p>
+                  </div>
                   <div className="flex flex-wrap gap-2">
                     {room.amenities.map(({ amenity }) => (
                       <span className="rounded-md border px-2 py-1 text-xs" key={amenity.id}>
@@ -156,16 +210,36 @@ export default async function MemberPage({ searchParams }: { searchParams: Membe
                   <form action={createBookingAction} className="grid gap-3 md:grid-cols-2">
                     <input name="roomId" type="hidden" value={room.id} />
                     <div className="space-y-2">
-                      <Label htmlFor={`booking-start-${room.id}`}>Start</Label>
-                      <Input defaultValue={params.startAt} id={`booking-start-${room.id}`} name="startAt" required type="datetime-local" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor={`booking-end-${room.id}`}>End</Label>
-                      <Input defaultValue={params.endAt} id={`booking-end-${room.id}`} name="endAt" required type="datetime-local" />
+                      <Label htmlFor={`booking-date-${room.id}`}>Date</Label>
+                      <Input defaultValue={defaultBookingDate} id={`booking-date-${room.id}`} name="bookingDate" required type="date" />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor={`attendee-${room.id}`}>Attendees</Label>
                       <Input id={`attendee-${room.id}`} max={room.capacity} min="1" name="attendeeCount" required type="number" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor={`booking-start-${room.id}`}>Start</Label>
+                      <select className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm" defaultValue={params.startTime ?? "09:00"} id={`booking-start-${room.id}`} name="startTime" required>
+                        {buildHourlyTimeOptions(room.branch.openingTime, room.branch.closingTime)
+                          .slice(0, -1)
+                          .map((time) => (
+                            <option key={time} value={time}>
+                              {time}
+                            </option>
+                          ))}
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor={`booking-end-${room.id}`}>End</Label>
+                      <select className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm" defaultValue={params.endTime ?? "10:00"} id={`booking-end-${room.id}`} name="endTime" required>
+                        {buildHourlyTimeOptions(room.branch.openingTime, room.branch.closingTime)
+                          .slice(1)
+                          .map((time) => (
+                            <option key={time} value={time}>
+                              {time}
+                            </option>
+                          ))}
+                      </select>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor={`purpose-${room.id}`}>Purpose</Label>
