@@ -2,10 +2,11 @@ import { PaymentStatus, Role } from "@prisma/client";
 import { Check, ExternalLink, X } from "lucide-react";
 import Link from "next/link";
 
+import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { EmptyState } from "@/components/empty-state";
+import { Notice } from "@/components/notice";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,6 +14,13 @@ import { requireRole } from "@/server/guards";
 import { listAllBookings } from "@/server/services/booking-service";
 
 import { reviewPaymentAction } from "./actions";
+
+type StaffPageProps = {
+  searchParams?: Promise<{
+    reviewed?: string;
+    error?: string;
+  }>;
+};
 
 function formatDateTime(date: Date) {
   return new Intl.DateTimeFormat("th-TH", {
@@ -22,11 +30,17 @@ function formatDateTime(date: Date) {
   }).format(date);
 }
 
-export default async function StaffPage() {
+export default async function StaffPage({ searchParams }: StaffPageProps) {
   await requireRole([Role.STAFF, Role.SUPER_ADMIN]);
+  const params = await searchParams;
   const bookings = await listAllBookings();
   const pendingReviews = bookings.filter((booking) => booking.payment?.status === PaymentStatus.PENDING_REVIEW);
   const otherBookings = bookings.filter((booking) => booking.payment?.status !== PaymentStatus.PENDING_REVIEW).slice(0, 8);
+  const notice = params?.error
+    ? { type: "error" as const, message: decodeURIComponent(params.error) }
+    : params?.reviewed
+      ? { type: "success" as const, message: "Payment review updated." }
+      : null;
 
   return (
     <div>
@@ -35,6 +49,8 @@ export default async function StaffPage() {
         title="Payment review"
         description="Review uploaded proof, approve valid payments, and reject unclear or incorrect submissions."
       />
+
+      {notice ? <Notice message={notice.message} type={notice.type} /> : null}
 
       <section className="mb-8 grid gap-4 md:grid-cols-3">
         <Card>
@@ -106,10 +122,10 @@ export default async function StaffPage() {
                 <form action={reviewPaymentAction}>
                   <input name="bookingId" type="hidden" value={booking.id} />
                   <input name="approved" type="hidden" value="true" />
-                  <Button className="w-full" type="submit">
+                  <ConfirmSubmitButton className="w-full" message="Approve this payment proof?">
                     <Check className="mr-2 h-4 w-4" aria-hidden="true" />
                     Approve
-                  </Button>
+                  </ConfirmSubmitButton>
                 </form>
                 <form action={reviewPaymentAction} className="grid gap-3">
                   <input name="bookingId" type="hidden" value={booking.id} />
@@ -118,10 +134,10 @@ export default async function StaffPage() {
                     <Label htmlFor={`reason-${booking.id}`}>Reject reason</Label>
                     <Input id={`reason-${booking.id}`} name="rejectionReason" placeholder="Invalid amount or unclear proof" required />
                   </div>
-                  <Button className="w-full" type="submit" variant="secondary">
+                  <ConfirmSubmitButton className="w-full" message="Reject this payment proof?" variant="secondary">
                     <X className="mr-2 h-4 w-4" aria-hidden="true" />
                     Reject
-                  </Button>
+                  </ConfirmSubmitButton>
                 </form>
               </div>
             </CardContent>

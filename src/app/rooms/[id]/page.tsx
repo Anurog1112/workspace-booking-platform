@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import { createBookingAction } from "@/app/member/actions";
 import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
+import { RoomVisual } from "@/components/room-visual";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -48,7 +49,10 @@ export default async function RoomDetailPage({ params }: RoomDetailPageProps) {
 
       <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
         <section className="space-y-6">
-          <Card>
+          <Card className="overflow-hidden">
+            <div className="aspect-[16/7] w-full">
+              <RoomVisual imageUrl={room.imageUrl} name={room.name} />
+            </div>
             <CardHeader>
               <CardTitle>Room details</CardTitle>
             </CardHeader>

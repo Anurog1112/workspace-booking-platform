@@ -67,8 +67,15 @@ export async function submitPaymentProofAction(formData: FormData) {
 
 export async function cancelBookingAction(formData: FormData) {
   const context = await requireRole([Role.MEMBER, Role.STAFF, Role.SUPER_ADMIN]);
-  const bookingId = z.string().min(1).parse(formData.get("bookingId"));
+  let target = "/member?cancelled=1";
 
-  await cancelOwnPendingBooking(context.profile.id, bookingId);
+  try {
+    const bookingId = z.string().min(1).parse(formData.get("bookingId"));
+    await cancelOwnPendingBooking(context.profile.id, bookingId);
+  } catch (error) {
+    target = `/member?error=${encodeURIComponent(getActionErrorMessage(error))}`;
+  }
+
   revalidatePath("/member");
+  redirect(target);
 }

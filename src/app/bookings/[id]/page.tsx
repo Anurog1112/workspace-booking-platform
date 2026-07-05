@@ -4,7 +4,10 @@ import { notFound } from "next/navigation";
 
 import { cancelBookingAction, submitPaymentProofAction } from "@/app/member/actions";
 import { reviewPaymentAction } from "@/app/staff/actions";
+import { BookingTimeline } from "@/components/booking-timeline";
+import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { PageHeader } from "@/components/page-header";
+import { RoomVisual } from "@/components/room-visual";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -49,6 +52,10 @@ export default async function BookingDetailPage({ params }: BookingDetailPagePro
         actions={<StatusBadge status={booking.status} />}
       />
 
+      <div className="mb-6">
+        <BookingTimeline bookingStatus={booking.status} paymentStatus={booking.payment?.status} />
+      </div>
+
       <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
         <section className="space-y-6">
           <Card>
@@ -84,6 +91,9 @@ export default async function BookingDetailPage({ params }: BookingDetailPagePro
           </Card>
 
           <Card>
+            <div className="aspect-[16/6] overflow-hidden rounded-t-lg">
+              <RoomVisual imageUrl={booking.room.imageUrl} name={booking.room.name} />
+            </div>
             <CardHeader>
               <CardTitle>Room</CardTitle>
             </CardHeader>
@@ -140,9 +150,9 @@ export default async function BookingDetailPage({ params }: BookingDetailPagePro
               <CardContent>
                 <form action={cancelBookingAction}>
                   <input name="bookingId" type="hidden" value={booking.id} />
-                  <Button className="w-full" type="submit" variant="ghost">
+                  <ConfirmSubmitButton className="w-full" message="Cancel this pending booking?" variant="ghost">
                     Cancel pending booking
-                  </Button>
+                  </ConfirmSubmitButton>
                 </form>
               </CardContent>
             </Card>
@@ -157,9 +167,9 @@ export default async function BookingDetailPage({ params }: BookingDetailPagePro
                 <form action={reviewPaymentAction}>
                   <input name="bookingId" type="hidden" value={booking.id} />
                   <input name="approved" type="hidden" value="true" />
-                  <Button className="w-full" type="submit">
+                  <ConfirmSubmitButton className="w-full" message="Approve this payment proof?">
                     Approve payment
-                  </Button>
+                  </ConfirmSubmitButton>
                 </form>
                 <form action={reviewPaymentAction} className="space-y-3">
                   <input name="bookingId" type="hidden" value={booking.id} />
@@ -168,9 +178,9 @@ export default async function BookingDetailPage({ params }: BookingDetailPagePro
                     <Label htmlFor="rejectionReason">Reject reason</Label>
                     <Input id="rejectionReason" name="rejectionReason" required />
                   </div>
-                  <Button className="w-full" type="submit" variant="secondary">
+                  <ConfirmSubmitButton className="w-full" message="Reject this payment proof?" variant="secondary">
                     Reject payment
-                  </Button>
+                  </ConfirmSubmitButton>
                 </form>
               </CardContent>
             </Card>

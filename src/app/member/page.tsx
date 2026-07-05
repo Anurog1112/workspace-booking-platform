@@ -3,7 +3,10 @@ import { CalendarPlus, CreditCard, Search, DoorOpen } from "lucide-react";
 import Link from "next/link";
 
 import { EmptyState } from "@/components/empty-state";
+import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
+import { Notice } from "@/components/notice";
 import { PageHeader } from "@/components/page-header";
+import { RoomVisual } from "@/components/room-visual";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,6 +26,7 @@ type MemberSearchParams = Promise<{
   endAt?: string;
   created?: string;
   paymentSubmitted?: string;
+  cancelled?: string;
   error?: string;
 }>;
 
@@ -48,6 +52,15 @@ export default async function MemberPage({ searchParams }: { searchParams: Membe
   });
   const filters = parsedFilters.success ? parsedFilters.data : {};
   const [branches, rooms, bookings] = await Promise.all([listBranches(), listRooms(filters), listBookingsForMember(context.profile.id)]);
+  const notice = params.error
+    ? { type: "error" as const, message: decodeURIComponent(params.error) }
+    : params.created
+      ? { type: "success" as const, message: "Booking created. Please submit payment proof before the deadline." }
+      : params.paymentSubmitted
+        ? { type: "success" as const, message: "Payment proof submitted for staff review." }
+        : params.cancelled
+          ? { type: "info" as const, message: "Booking cancelled." }
+          : null;
 
   return (
     <div>
@@ -57,13 +70,7 @@ export default async function MemberPage({ searchParams }: { searchParams: Membe
         description="Search by branch, capacity, and time range. Confirmed and pending-review bookings are blocked from availability."
       />
 
-      {(params.created || params.paymentSubmitted || params.error) && (
-        <div className="mb-6 rounded-md border bg-card px-4 py-3 text-sm">
-          {params.created && "Booking created. Please submit payment proof before the deadline."}
-          {params.paymentSubmitted && "Payment proof submitted for staff review."}
-          {params.error && decodeURIComponent(params.error)}
-        </div>
-      )}
+      {notice ? <Notice message={notice.message} type={notice.type} /> : null}
 
       <Card className="mb-6">
         <CardHeader>
@@ -122,7 +129,10 @@ export default async function MemberPage({ searchParams }: { searchParams: Membe
             />
           ) : (
             rooms.map((room) => (
-              <Card key={room.id}>
+              <Card className="overflow-hidden" key={room.id}>
+                <div className="aspect-[16/7] w-full">
+                  <RoomVisual imageUrl={room.imageUrl} name={room.name} />
+                </div>
                 <CardHeader className="flex-row items-start justify-between gap-4 space-y-0">
                   <div>
                     <CardTitle>{room.name}</CardTitle>
@@ -218,9 +228,9 @@ export default async function MemberPage({ searchParams }: { searchParams: Membe
                   {cancellableStatuses.has(booking.status) && (
                     <form action={cancelBookingAction}>
                       <input name="bookingId" type="hidden" value={booking.id} />
-                      <Button className="w-full" type="submit" variant="ghost">
+                      <ConfirmSubmitButton className="w-full" message="Cancel this pending booking?" variant="ghost">
                         Cancel booking
-                      </Button>
+                      </ConfirmSubmitButton>
                     </form>
                   )}
                 </CardContent>

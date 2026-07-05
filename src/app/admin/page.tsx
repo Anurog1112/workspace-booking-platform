@@ -2,7 +2,9 @@ import { Building2, Plus, Settings2 } from "lucide-react";
 import { Role, RoomStatus } from "@prisma/client";
 import Link from "next/link";
 
+import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { EmptyState } from "@/components/empty-state";
+import { Notice } from "@/components/notice";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
@@ -16,9 +18,28 @@ import { createAmenityAction, createRoomAction, updateRoomStatusAction } from ".
 
 const roomStatuses = Object.values(RoomStatus);
 
-export default async function AdminPage() {
+type AdminPageProps = {
+  searchParams?: Promise<{
+    amenityCreated?: string;
+    roomCreated?: string;
+    roomUpdated?: string;
+    error?: string;
+  }>;
+};
+
+export default async function AdminPage({ searchParams }: AdminPageProps) {
   await requireRole([Role.SUPER_ADMIN]);
+  const params = await searchParams;
   const [branches, amenities, rooms] = await Promise.all([listBranches(), listAmenities(), listRoomsForAdmin()]);
+  const notice = params?.error
+    ? { type: "error" as const, message: decodeURIComponent(params.error) }
+    : params?.roomCreated
+      ? { type: "success" as const, message: "Room created." }
+      : params?.roomUpdated
+        ? { type: "success" as const, message: "Room status updated." }
+        : params?.amenityCreated
+          ? { type: "success" as const, message: "Amenity created." }
+          : null;
 
   return (
     <div>
@@ -35,6 +56,8 @@ export default async function AdminPage() {
           </Link>
         }
       />
+
+      {notice ? <Notice message={notice.message} type={notice.type} /> : null}
 
       <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
         <section className="space-y-4">
@@ -82,9 +105,9 @@ export default async function AdminPage() {
                       ))}
                     </select>
                   </div>
-                  <Button type="submit" variant="secondary">
+                  <ConfirmSubmitButton message="Update this room status?" variant="secondary">
                     Update
-                  </Button>
+                  </ConfirmSubmitButton>
                 </form>
               </CardContent>
               </Card>

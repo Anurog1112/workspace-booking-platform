@@ -46,7 +46,7 @@ export function AppShell({ children, session }: AppShellProps) {
             </Link>
           </div>
 
-          <nav className="flex gap-1 overflow-x-auto">
+          <nav className="hidden gap-1 overflow-x-auto md:flex">
             {navigation[role].map((item) => (
               <Link
                 className="inline-flex h-9 shrink-0 items-center gap-2 rounded-md px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
@@ -74,7 +74,15 @@ export function AppShell({ children, session }: AppShellProps) {
           </div>
         </div>
       </header>
-      <main className="mx-auto w-full max-w-7xl px-4 py-6 md:px-6">{children}</main>
+      <main className="mx-auto w-full max-w-7xl px-4 pb-24 pt-6 md:px-6 md:pb-6">{children}</main>
+      <nav className="fixed inset-x-0 bottom-0 z-30 grid border-t bg-card md:hidden" style={{ gridTemplateColumns: `repeat(${navigation[role].length}, minmax(0, 1fr))` }}>
+        {navigation[role].map((item) => (
+          <Link className="flex min-h-14 flex-col items-center justify-center gap-1 px-1 text-xs font-medium text-muted-foreground" href={item.href} key={item.href}>
+            <item.icon className="h-4 w-4" aria-hidden="true" />
+            <span className="max-w-full truncate">{item.label}</span>
+          </Link>
+        ))}
+      </nav>
     </div>
   );
 }

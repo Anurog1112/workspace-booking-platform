@@ -2,7 +2,9 @@ import { Role } from "@prisma/client";
 import { Search, Users } from "lucide-react";
 
 import { updateUserRoleAction } from "@/app/admin/users/actions";
+import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { EmptyState } from "@/components/empty-state";
+import { Notice } from "@/components/notice";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
@@ -26,6 +28,11 @@ export default async function AdminUsersPage({ searchParams }: AdminUsersPagePro
   await requireRole([Role.SUPER_ADMIN]);
   const params = await searchParams;
   const users = await listUsers({ q: params?.q });
+  const notice = params?.error
+    ? { type: "error" as const, message: decodeURIComponent(params.error) }
+    : params?.updated
+      ? { type: "success" as const, message: "Role updated." }
+      : null;
 
   return (
     <div>
@@ -35,12 +42,7 @@ export default async function AdminUsersPage({ searchParams }: AdminUsersPagePro
         description="Search users, review current roles, and assign staff or super admin access. New public registrations always start as MEMBER."
       />
 
-      {(params?.updated || params?.error) && (
-        <div className="mb-4 rounded-md border bg-card px-4 py-3 text-sm">
-          {params.updated ? "Role updated." : null}
-          {params.error ? decodeURIComponent(params.error) : null}
-        </div>
-      )}
+      {notice ? <Notice message={notice.message} type={notice.type} /> : null}
 
       <Card className="mb-5">
         <CardContent className="p-4">
@@ -87,9 +89,9 @@ export default async function AdminUsersPage({ searchParams }: AdminUsersPagePro
                     </option>
                   ))}
                 </select>
-                <Button type="submit" variant="secondary">
+                <ConfirmSubmitButton message="Update this user's role?" variant="secondary">
                   Save
-                </Button>
+                </ConfirmSubmitButton>
               </form>
             </div>
           ))}
