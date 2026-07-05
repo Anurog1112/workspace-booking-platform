@@ -2,12 +2,13 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 
+import { getDemoAuthUser, getDemoUserByEmail, getDemoUserById, isDemoMode } from "@/lib/demo-mode";
 import { prisma } from "@/lib/prisma";
 import { verifyPassword } from "@/lib/password";
 import { signInSchema } from "@/server/validators/auth";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  adapter: PrismaAdapter(prisma),
+  adapter: isDemoMode ? undefined : PrismaAdapter(prisma),
   session: {
     strategy: "jwt",
   },
@@ -25,6 +26,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         if (!parsed.success) {
           return null;
+        }
+
+        if (isDemoMode) {
+          return getDemoAuthUser(parsed.data.email, parsed.data.password);
         }
 
         const user = await prisma.user.findUnique({
@@ -56,6 +61,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       const userId = user?.id ?? token.sub;
 
       if (!userId) {
+        return token;
+      }
+
+      if (isDemoMode) {
+        const demoUser = user?.email ? getDemoUserByEmail(user.email) : getDemoUserById(userId);
+
+        token.sub = demoUser?.userId ?? userId;
+        token.profileId = demoUser?.profileId;
+        token.role = demoUser?.role;
+
         return token;
       }
 

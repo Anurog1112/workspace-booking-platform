@@ -1,22 +1,40 @@
 import { RoomStatus, type Prisma } from "@prisma/client";
 
+import { demoAmenities, demoBranches, getDemoRooms, isDemoMode } from "@/lib/demo-mode";
 import { prisma } from "@/lib/prisma";
 import { BLOCKING_BOOKING_STATUSES } from "@/server/services/booking-service";
 import type { CreateRoomInput, RoomSearchInput, UpdateRoomInput } from "@/server/validators/room";
 
 export async function listBranches() {
+  if (isDemoMode) {
+    return demoBranches;
+  }
+
   return prisma.branch.findMany({
     orderBy: { name: "asc" },
   });
 }
 
 export async function listAmenities() {
+  if (isDemoMode) {
+    return demoAmenities;
+  }
+
   return prisma.amenity.findMany({
     orderBy: { name: "asc" },
   });
 }
 
 export async function createAmenity(input: { name: string; icon?: string }) {
+  if (isDemoMode) {
+    return {
+      id: `demo-amenity-${input.name.toLowerCase().replaceAll(" ", "-")}`,
+      name: input.name,
+      icon: input.icon ?? null,
+      createdAt: new Date(),
+    };
+  }
+
   return prisma.amenity.create({
     data: {
       name: input.name,
@@ -26,6 +44,10 @@ export async function createAmenity(input: { name: string; icon?: string }) {
 }
 
 export async function listRooms(filters: RoomSearchInput = {}) {
+  if (isDemoMode) {
+    return getDemoRooms(filters);
+  }
+
   const where: Prisma.RoomWhereInput = {
     branchId: filters.branchId,
     status: filters.status ?? RoomStatus.ACTIVE,
@@ -57,6 +79,10 @@ export async function listRooms(filters: RoomSearchInput = {}) {
 }
 
 export async function listRoomsForAdmin() {
+  if (isDemoMode) {
+    return getDemoRooms();
+  }
+
   return prisma.room.findMany({
     include: {
       branch: true,
@@ -71,6 +97,10 @@ export async function listRoomsForAdmin() {
 }
 
 export async function getRoomById(roomId: string) {
+  if (isDemoMode) {
+    return getDemoRooms().find((room) => room.id === roomId) ?? null;
+  }
+
   return prisma.room.findUnique({
     where: { id: roomId },
     include: {
@@ -85,6 +115,17 @@ export async function getRoomById(roomId: string) {
 }
 
 export async function createRoom(input: CreateRoomInput) {
+  if (isDemoMode) {
+    return {
+      id: `demo-room-${input.name.toLowerCase().replaceAll(" ", "-")}`,
+      amenities: input.amenityIds.map((amenityId) => ({
+        roomId: "demo-room-created",
+        amenityId,
+        createdAt: new Date(),
+      })),
+    };
+  }
+
   const amenityIds = [...new Set(input.amenityIds)];
 
   return prisma.room.create({
@@ -109,6 +150,21 @@ export async function createRoom(input: CreateRoomInput) {
 }
 
 export async function updateRoom(input: UpdateRoomInput) {
+  if (isDemoMode) {
+    return {
+      id: input.id,
+      branchId: input.branchId ?? demoBranches[0].id,
+      name: input.name ?? "Demo Room",
+      description: input.description ?? null,
+      capacity: input.capacity ?? 4,
+      hourlyRate: input.hourlyRate ?? 0,
+      imageUrl: input.imageUrl ?? null,
+      status: input.status ?? RoomStatus.ACTIVE,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+  }
+
   const { id, amenityIds, ...roomData } = input;
   const uniqueAmenityIds = amenityIds ? [...new Set(amenityIds)] : undefined;
 

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { auth } from "@/lib/auth";
+import { demoBookings, demoRooms, isDemoMode } from "@/lib/demo-mode";
 import { prisma } from "@/lib/prisma";
 
 const roleLinks = {
@@ -28,11 +29,17 @@ export default async function DashboardPage() {
   }
 
   const role = session.user.role ?? Role.MEMBER;
-  const [activeRooms, pendingPayments, confirmedBookings] = await Promise.all([
-    prisma.room.count({ where: { status: RoomStatus.ACTIVE } }),
-    prisma.payment.count({ where: { status: PaymentStatus.PENDING_REVIEW } }),
-    prisma.booking.count({ where: { status: BookingStatus.CONFIRMED } }),
-  ]);
+  const [activeRooms, pendingPayments, confirmedBookings] = isDemoMode
+    ? [
+        demoRooms.filter((room) => room.status === RoomStatus.ACTIVE).length,
+        demoBookings.filter((booking) => booking.payment?.status === PaymentStatus.PENDING_REVIEW).length,
+        demoBookings.filter((booking) => booking.status === BookingStatus.CONFIRMED).length,
+      ]
+    : await Promise.all([
+        prisma.room.count({ where: { status: RoomStatus.ACTIVE } }),
+        prisma.payment.count({ where: { status: PaymentStatus.PENDING_REVIEW } }),
+        prisma.booking.count({ where: { status: BookingStatus.CONFIRMED } }),
+      ]);
 
   return (
     <main className="mx-auto min-h-screen max-w-5xl px-6 py-8">

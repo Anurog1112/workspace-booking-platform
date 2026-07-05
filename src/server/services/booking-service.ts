@@ -1,5 +1,6 @@
 import { BookingStatus, PaymentStatus, Prisma, PrismaClient, RoomStatus } from "@prisma/client";
 
+import { createDemoBooking, demoBookings, getDemoBookingsForMember, isDemoMode } from "@/lib/demo-mode";
 import { prisma } from "@/lib/prisma";
 import type { CreateBookingInput } from "@/server/validators/booking";
 
@@ -76,6 +77,17 @@ export async function hasBookingOverlap(
   input: { roomId: string; startAt: Date; endAt: Date; excludeBookingId?: string },
   client: PrismaExecutor = prisma,
 ) {
+  if (isDemoMode) {
+    return demoBookings.some(
+      (booking) =>
+        booking.id !== input.excludeBookingId &&
+        booking.roomId === input.roomId &&
+        booking.startAt < input.endAt &&
+        booking.endAt > input.startAt &&
+        BLOCKING_BOOKING_STATUSES.includes(booking.status),
+    );
+  }
+
   const overlap = await client.booking.findFirst({
     where: {
       id: input.excludeBookingId ? { not: input.excludeBookingId } : undefined,
@@ -103,6 +115,11 @@ export async function assertRoomAvailable(
 
 export async function createBooking(memberId: string, input: CreateBookingInput) {
   assertValidBookingTimeRange(input);
+
+  if (isDemoMode) {
+    await assertRoomAvailable(input);
+    return createDemoBooking(memberId, input);
+  }
 
   return prisma.$transaction(async (tx) => {
     const room = await tx.room.findUnique({
@@ -151,6 +168,10 @@ export async function createBooking(memberId: string, input: CreateBookingInput)
 }
 
 export async function listBookingsForMember(memberId: string) {
+  if (isDemoMode) {
+    return getDemoBookingsForMember(memberId);
+  }
+
   return prisma.booking.findMany({
     where: { memberId },
     include: {
@@ -167,6 +188,10 @@ export async function listBookingsForMember(memberId: string) {
 }
 
 export async function listAllBookings() {
+  if (isDemoMode) {
+    return demoBookings;
+  }
+
   return prisma.booking.findMany({
     include: {
       member: true,
@@ -183,6 +208,20 @@ export async function listAllBookings() {
 }
 
 export async function cancelOwnPendingBooking(memberId: string, bookingId: string) {
+  if (isDemoMode) {
+    const booking = getDemoBookingsForMember(memberId).find((item) => item.id === bookingId);
+
+    if (!booking) {
+      throw new BookingValidationError("Booking cannot be cancelled.");
+    }
+
+    return {
+      ...booking,
+      status: BookingStatus.CANCELLED,
+      payment: booking.payment ? { ...booking.payment, status: PaymentStatus.CANCELLED } : null,
+    };
+  }
+
   return prisma.$transaction(async (tx) => {
     const booking = await tx.booking.findFirst({
       where: {

@@ -1,6 +1,7 @@
 import type { Profile, Role } from "@prisma/client";
 
 import { auth } from "@/lib/auth";
+import { getDemoProfileByUserId, isDemoMode } from "@/lib/demo-mode";
 import { prisma } from "@/lib/prisma";
 
 export class AuthRequiredError extends Error {
@@ -27,6 +28,19 @@ export async function requireAuth(): Promise<AuthContext> {
 
   if (!session?.user?.id) {
     throw new AuthRequiredError();
+  }
+
+  if (isDemoMode) {
+    const profile = getDemoProfileByUserId(session.user.id);
+
+    if (!profile) {
+      throw new AuthRequiredError();
+    }
+
+    return {
+      userId: session.user.id,
+      profile,
+    };
   }
 
   const profile = await prisma.profile.findUnique({

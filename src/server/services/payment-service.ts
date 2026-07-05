@@ -1,5 +1,6 @@
 import { BookingStatus, PaymentStatus } from "@prisma/client";
 
+import { isDemoMode, reviewDemoPayment, submitDemoPaymentProof } from "@/lib/demo-mode";
 import { prisma } from "@/lib/prisma";
 import type { ReviewPaymentInput, SubmitPaymentProofInput } from "@/server/validators/payment";
 
@@ -11,6 +12,10 @@ export class PaymentValidationError extends Error {
 }
 
 export async function submitPaymentProof(memberId: string, input: SubmitPaymentProofInput) {
+  if (isDemoMode) {
+    return submitDemoPaymentProof(memberId, input);
+  }
+
   return prisma.$transaction(async (tx) => {
     const booking = await tx.booking.findUnique({
       where: { id: input.bookingId },
@@ -53,6 +58,10 @@ export async function submitPaymentProof(memberId: string, input: SubmitPaymentP
 }
 
 export async function reviewPayment(staffProfileId: string, input: ReviewPaymentInput) {
+  if (isDemoMode) {
+    return reviewDemoPayment(staffProfileId, input);
+  }
+
   return prisma.$transaction(async (tx) => {
     const booking = await tx.booking.findUnique({
       where: { id: input.bookingId },
