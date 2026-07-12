@@ -9,8 +9,6 @@ export const metadata: Metadata = {
   description: "Room booking platform for co-working and meeting spaces.",
 };
 
-export const preferredRegion = "hnd1";
-
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const session = await auth();
 
