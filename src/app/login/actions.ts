@@ -19,12 +19,12 @@ function isAuthFailure(error: unknown) {
   }
 
   const maybeError = error as { name?: unknown; type?: unknown };
-  return maybeError.name === "AuthError" || typeof maybeError.type === "string";
+  return maybeError.name === "CredentialsSignin" || maybeError.type === "CredentialsSignin";
 }
 
 export async function loginAction(formData: FormData) {
-  const email = String(formData.get("email") ?? "");
-  const password = String(formData.get("password") ?? "");
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const password = String(formData.get("password") ?? "").trim();
 
   try {
     await signIn("credentials", {
@@ -41,6 +41,7 @@ export async function loginAction(formData: FormData) {
       redirect("/login?error=CredentialsSignin");
     }
 
-    throw error;
+    console.error("Login failed with an unexpected auth error.", error);
+    redirect("/login?error=ServerError");
   }
 }
