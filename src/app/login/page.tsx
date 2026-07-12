@@ -33,11 +33,11 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           <form action={loginAction} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" name="email" type="email" autoComplete="email" defaultValue="member@example.com" required />
+              <Input id="email" name="email" type="email" autoComplete="email" required />
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <Input id="password" name="password" type="password" autoComplete="current-password" defaultValue="Password123!" required />
+              <Input id="password" name="password" type="password" autoComplete="current-password" required />
             </div>
             {registered ? <p className="rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-700">Account created. Sign in to continue.</p> : null}
             {hasError ? <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">Invalid email or password.</p> : null}
