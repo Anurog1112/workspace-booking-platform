@@ -1,4 +1,4 @@
-import { BookingStatus, PaymentStatus, Role, RoomStatus } from "@prisma/client";
+import { BookingStatus, PaymentStatus, Prisma, Role, RoomStatus } from "@prisma/client";
 
 import { BRANCH_TIME_ZONE, combineBranchDateTime } from "@/lib/branch-time";
 import { demoBookings, demoRooms, demoUsers, isDemoMode } from "@/lib/demo-mode";
@@ -33,13 +33,15 @@ export async function getMemberDashboard(profileId: string) {
     };
   }
 
-  const [activeRooms, statusCounts, nextBooking] = await Promise.all([
-    prisma.room.count({ where: { status: RoomStatus.ACTIVE } }),
-    prisma.booking.groupBy({
-      by: ["status"],
-      where: { memberId: profileId, endAt: { gte: now } },
-      _count: { _all: true },
-    }),
+  const [metrics, nextBooking] = await Promise.all([
+    prisma.$queryRaw<Array<{ activeRooms: bigint; upcomingBookings: bigint; paymentActions: bigint }>>(Prisma.sql`
+      SELECT
+        (SELECT COUNT(*) FROM "Room" WHERE status = 'ACTIVE') AS "activeRooms",
+        COUNT(*) FILTER (WHERE status IN ('CONFIRMED', 'PENDING_REVIEW')) AS "upcomingBookings",
+        COUNT(*) FILTER (WHERE status IN ('PENDING_PAYMENT', 'REJECTED')) AS "paymentActions"
+      FROM "Booking"
+      WHERE "memberId" = ${profileId} AND "endAt" >= ${now}
+    `),
     prisma.booking.findFirst({
       where: {
         memberId: profileId,
@@ -50,13 +52,12 @@ export async function getMemberDashboard(profileId: string) {
       orderBy: { startAt: "asc" },
     }),
   ]);
-  const count = (statuses: BookingStatus[]) =>
-    statusCounts.filter((item) => statuses.includes(item.status)).reduce((total, item) => total + item._count._all, 0);
+  const row = metrics[0];
 
   return {
-    activeRooms,
-    upcomingBookings: count([BookingStatus.CONFIRMED, BookingStatus.PENDING_REVIEW]),
-    paymentActions: count([BookingStatus.PENDING_PAYMENT, BookingStatus.REJECTED]),
+    activeRooms: Number(row.activeRooms),
+    upcomingBookings: Number(row.upcomingBookings),
+    paymentActions: Number(row.paymentActions),
     nextBooking,
   };
 }
@@ -75,10 +76,13 @@ export async function getStaffDashboard() {
     };
   }
 
-  const [pendingReviews, confirmedToday, checkinsToday, nextArrivals] = await Promise.all([
-    prisma.payment.count({ where: { status: PaymentStatus.PENDING_REVIEW } }),
-    prisma.booking.count({ where: { status: BookingStatus.CONFIRMED, startAt: { gte: start, lt: end } } }),
-    prisma.checkin.count({ where: { checkedInAt: { gte: start, lt: end } } }),
+  const [metrics, nextArrivals] = await Promise.all([
+    prisma.$queryRaw<Array<{ pendingReviews: bigint; confirmedToday: bigint; checkinsToday: bigint }>>(Prisma.sql`
+      SELECT
+        (SELECT COUNT(*) FROM "Payment" WHERE status = 'PENDING_REVIEW') AS "pendingReviews",
+        (SELECT COUNT(*) FROM "Booking" WHERE status = 'CONFIRMED' AND "startAt" >= ${start} AND "startAt" < ${end}) AS "confirmedToday",
+        (SELECT COUNT(*) FROM "Checkin" WHERE "checkedInAt" >= ${start} AND "checkedInAt" < ${end}) AS "checkinsToday"
+    `),
     prisma.booking.findMany({
       where: { status: BookingStatus.CONFIRMED, startAt: { gte: new Date() } },
       select: {
@@ -92,8 +96,14 @@ export async function getStaffDashboard() {
       take: 5,
     }),
   ]);
+  const row = metrics[0];
 
-  return { pendingReviews, confirmedToday, checkinsToday, nextArrivals };
+  return {
+    pendingReviews: Number(row.pendingReviews),
+    confirmedToday: Number(row.confirmedToday),
+    checkinsToday: Number(row.checkinsToday),
+    nextArrivals,
+  };
 }
 
 export async function getAdminDashboard() {
@@ -108,24 +118,31 @@ export async function getAdminDashboard() {
     };
   }
 
-  const [roomCounts, users, bookingCounts, pendingReviews] = await Promise.all([
-    prisma.room.groupBy({ by: ["status"], _count: { _all: true } }),
-    prisma.profile.count(),
-    prisma.booking.groupBy({ by: ["status"], _count: { _all: true } }),
-    prisma.payment.count({ where: { status: PaymentStatus.PENDING_REVIEW } }),
-  ]);
-  const roomCount = (statuses: RoomStatus[]) =>
-    roomCounts.filter((item) => statuses.includes(item.status)).reduce((total, item) => total + item._count._all, 0);
-  const bookingCount = (statuses: BookingStatus[]) =>
-    bookingCounts.filter((item) => statuses.includes(item.status)).reduce((total, item) => total + item._count._all, 0);
+  const rows = await prisma.$queryRaw<Array<{
+    activeRooms: bigint;
+    unavailableRooms: bigint;
+    users: bigint;
+    totalBookings: bigint;
+    pendingReviews: bigint;
+    confirmedBookings: bigint;
+  }>>(Prisma.sql`
+    SELECT
+      (SELECT COUNT(*) FROM "Room" WHERE status = 'ACTIVE') AS "activeRooms",
+      (SELECT COUNT(*) FROM "Room" WHERE status IN ('MAINTENANCE', 'INACTIVE')) AS "unavailableRooms",
+      (SELECT COUNT(*) FROM "Profile") AS users,
+      (SELECT COUNT(*) FROM "Booking") AS "totalBookings",
+      (SELECT COUNT(*) FROM "Payment" WHERE status = 'PENDING_REVIEW') AS "pendingReviews",
+      (SELECT COUNT(*) FROM "Booking" WHERE status = 'CONFIRMED') AS "confirmedBookings"
+  `);
+  const row = rows[0];
 
   return {
-    activeRooms: roomCount([RoomStatus.ACTIVE]),
-    unavailableRooms: roomCount([RoomStatus.MAINTENANCE, RoomStatus.INACTIVE]),
-    users,
-    totalBookings: bookingCounts.reduce((total, item) => total + item._count._all, 0),
-    pendingReviews,
-    confirmedBookings: bookingCount([BookingStatus.CONFIRMED]),
+    activeRooms: Number(row.activeRooms),
+    unavailableRooms: Number(row.unavailableRooms),
+    users: Number(row.users),
+    totalBookings: Number(row.totalBookings),
+    pendingReviews: Number(row.pendingReviews),
+    confirmedBookings: Number(row.confirmedBookings),
   };
 }
 
