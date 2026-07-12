@@ -1,4 +1,4 @@
-import { RoomStatus, type Prisma } from "@prisma/client";
+import { Prisma, RoomStatus } from "@prisma/client";
 import { unstable_cache } from "next/cache";
 
 import { demoAmenities, demoBranches, getDemoRooms, isDemoMode } from "@/lib/demo-mode";
@@ -91,6 +91,101 @@ export async function listRooms(filters: RoomSearchInput = {}) {
     },
     orderBy: [{ branch: { name: "asc" } }, { name: "asc" }],
   });
+}
+
+export async function listRoomSearchResults(filters: RoomSearchInput = {}) {
+  if (isDemoMode) {
+    return getDemoRooms(filters);
+  }
+
+  const status = filters.status ?? RoomStatus.ACTIVE;
+  const conditions: Prisma.Sql[] = [Prisma.sql`r.status = ${status}::"RoomStatus"`];
+
+  if (filters.branchId) {
+    conditions.push(Prisma.sql`r."branchId" = ${filters.branchId}`);
+  }
+
+  if (filters.capacity) {
+    conditions.push(Prisma.sql`r.capacity >= ${filters.capacity}`);
+  }
+
+  if (filters.startAt && filters.endAt) {
+    conditions.push(Prisma.sql`
+      NOT EXISTS (
+        SELECT 1
+        FROM "Booking" booking
+        WHERE booking."roomId" = r.id
+          AND booking."startAt" < ${filters.endAt}
+          AND booking."endAt" > ${filters.startAt}
+          AND booking.status IN ('PENDING_REVIEW', 'CONFIRMED')
+      )
+    `);
+  }
+
+  const rows = await prisma.$queryRaw<Array<
+    Awaited<ReturnType<typeof listRooms>>[number] & {
+      branchRecordId: string;
+      branchName: string;
+      branchAddress: string;
+      branchOpeningTime: Date;
+      branchClosingTime: Date;
+      branchCreatedAt: Date;
+      branchUpdatedAt: Date;
+      amenitiesJson: Array<{
+        roomId: string;
+        amenityId: string;
+        createdAt: string;
+        amenity: { id: string; name: string; icon: string | null; createdAt: string };
+      }>;
+    }
+  >>(Prisma.sql`
+    SELECT
+      r.*,
+      branch.id AS "branchRecordId",
+      branch.name AS "branchName",
+      branch.address AS "branchAddress",
+      branch."openingTime" AS "branchOpeningTime",
+      branch."closingTime" AS "branchClosingTime",
+      branch."createdAt" AS "branchCreatedAt",
+      branch."updatedAt" AS "branchUpdatedAt",
+      COALESCE(
+        jsonb_agg(
+          jsonb_build_object(
+            'roomId', room_amenity."roomId",
+            'amenityId', amenity.id,
+            'createdAt', room_amenity."createdAt",
+            'amenity', jsonb_build_object(
+              'id', amenity.id,
+              'name', amenity.name,
+              'icon', amenity.icon,
+              'createdAt', amenity."createdAt"
+            )
+          )
+        ) FILTER (WHERE amenity.id IS NOT NULL),
+        '[]'::jsonb
+      ) AS "amenitiesJson"
+    FROM "Room" r
+    JOIN "Branch" branch ON branch.id = r."branchId"
+    LEFT JOIN "RoomAmenity" room_amenity ON room_amenity."roomId" = r.id
+    LEFT JOIN "Amenity" amenity ON amenity.id = room_amenity."amenityId"
+    WHERE ${Prisma.join(conditions, " AND ")}
+    GROUP BY r.id, branch.id
+    ORDER BY branch.name ASC, r.name ASC
+  `);
+
+  return rows.map(({ amenitiesJson, branchRecordId, branchName, branchAddress, branchOpeningTime, branchClosingTime, branchCreatedAt, branchUpdatedAt, ...room }) => ({
+    ...room,
+    branch: {
+      id: branchRecordId,
+      name: branchName,
+      address: branchAddress,
+      openingTime: branchOpeningTime,
+      closingTime: branchClosingTime,
+      createdAt: branchCreatedAt,
+      updatedAt: branchUpdatedAt,
+    },
+    amenities: amenitiesJson,
+  }));
 }
 
 export async function listRoomsForAdmin() {

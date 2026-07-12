@@ -9,7 +9,7 @@ import { RoomVisual } from "@/components/room-visual";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { combineBranchDateTime, formatBranchTime } from "@/lib/branch-time";
 import { requireRole } from "@/server/guards";
-import { listBranchOptions, listRooms } from "@/server/services/room-service";
+import { listBranchOptions, listRoomSearchResults } from "@/server/services/room-service";
 import { roomSearchSchema } from "@/server/validators/room";
 
 type MemberSearchParams = Promise<{
@@ -55,7 +55,7 @@ export default async function MemberPage({ searchParams }: { searchParams: Membe
     endAt: dateRange.endAt || undefined,
   });
   const filters = parsedFilters.success ? parsedFilters.data : {};
-  const [branches, rooms] = await Promise.all([listBranchOptions(), listRooms(filters)]);
+  const [branches, rooms] = await Promise.all([listBranchOptions(), listRoomSearchResults(filters)]);
   const defaultBookingDate = params.bookingDate ?? getDefaultBookingDate();
   const searchTimeOptions = getSearchTimeOptions();
 
