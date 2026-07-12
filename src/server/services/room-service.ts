@@ -1,9 +1,16 @@
 import { RoomStatus, type Prisma } from "@prisma/client";
+import { unstable_cache } from "next/cache";
 
 import { demoAmenities, demoBranches, getDemoRooms, isDemoMode } from "@/lib/demo-mode";
 import { prisma } from "@/lib/prisma";
 import { BLOCKING_BOOKING_STATUSES } from "@/server/services/booking-service";
 import type { CreateRoomInput, RoomSearchInput, UpdateRoomInput } from "@/server/validators/room";
+
+const listCachedBranchOptions = unstable_cache(
+  () => prisma.branch.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } }),
+  ["branch-options"],
+  { revalidate: 300 },
+);
 
 export async function listBranches() {
   if (isDemoMode) {
@@ -13,6 +20,14 @@ export async function listBranches() {
   return prisma.branch.findMany({
     orderBy: { name: "asc" },
   });
+}
+
+export async function listBranchOptions() {
+  if (isDemoMode) {
+    return demoBranches.map(({ id, name }) => ({ id, name }));
+  }
+
+  return listCachedBranchOptions();
 }
 
 export async function listAmenities() {

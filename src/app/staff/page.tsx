@@ -11,8 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { requireRole } from "@/server/guards";
-import { listPendingReviewBookings, listRecentBookings } from "@/server/services/booking-service";
-import { getPaymentReviewCounts } from "@/server/services/payment-service";
+import { listPendingReviewBookings } from "@/server/services/booking-service";
 
 import { reviewPaymentAction } from "./actions";
 
@@ -34,11 +33,7 @@ function formatDateTime(date: Date) {
 export default async function StaffPage({ searchParams }: StaffPageProps) {
   await requireRole([Role.STAFF, Role.SUPER_ADMIN]);
   const params = await searchParams;
-  const [pendingReviews, otherBookings, reviewCounts] = await Promise.all([
-    listPendingReviewBookings(),
-    listRecentBookings(),
-    getPaymentReviewCounts(),
-  ]);
+  const pendingReviews = await listPendingReviewBookings();
   const notice = params?.error
     ? { type: "error" as const, message: decodeURIComponent(params.error) }
     : params?.reviewed
@@ -55,25 +50,20 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
 
       {notice ? <Notice message={notice.message} type={notice.type} /> : null}
 
-      <section className="mb-8 grid gap-4 md:grid-cols-3">
+      <section className="mb-8 grid gap-4 md:grid-cols-[240px_1fr]">
         <Card>
           <CardHeader>
             <CardTitle>{pendingReviews.length}</CardTitle>
-            <CardDescription>Pending review</CardDescription>
+            <CardDescription>Payments waiting for review</CardDescription>
           </CardHeader>
         </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>{reviewCounts.approved}</CardTitle>
-            <CardDescription>Approved payments</CardDescription>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>{reviewCounts.rejected}</CardTitle>
-            <CardDescription>Rejected payments</CardDescription>
-          </CardHeader>
-        </Card>
+        <div className="flex items-center justify-between gap-4 rounded-lg border bg-card px-5 py-4">
+          <div>
+            <p className="font-semibold">Need to reserve a room for yourself?</p>
+            <p className="mt-1 text-sm text-muted-foreground">Staff keep the same room search and personal booking tools as members.</p>
+          </div>
+          <Link className="inline-flex h-10 shrink-0 items-center rounded-md border px-4 text-sm font-semibold hover:bg-muted" href="/member">Book a room</Link>
+        </div>
       </section>
 
       <section className="space-y-4">
@@ -152,24 +142,6 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
         )}
       </section>
 
-      <section className="mt-8">
-        <h2 className="mb-4 text-xl font-semibold">Recent bookings</h2>
-        <div className="space-y-3">
-          {otherBookings.map((booking) => (
-            <Card key={booking.id}>
-              <CardContent className="grid gap-2 p-4 text-sm md:grid-cols-5">
-                <Link className="font-medium hover:text-primary" href={`/bookings/${booking.id}`}>
-                  {booking.room.name}
-                </Link>
-                <span>{booking.member.fullName}</span>
-                <span>{formatDateTime(booking.startAt)}</span>
-                <StatusBadge status={booking.status} />
-                {booking.payment ? <StatusBadge status={booking.payment.status} /> : <span>N/A</span>}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </section>
     </div>
   );
 }

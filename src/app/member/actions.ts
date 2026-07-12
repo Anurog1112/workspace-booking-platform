@@ -77,6 +77,7 @@ export async function createBookingAction(_previousState: CreateBookingActionSta
 
     const booking = await createBooking(context.profile.id, parsed.data);
     revalidatePath("/member");
+    revalidatePath("/member/bookings");
     revalidatePath("/dashboard");
 
     return {
@@ -96,7 +97,7 @@ export async function createBookingAction(_previousState: CreateBookingActionSta
 
 export async function submitPaymentProofAction(formData: FormData) {
   const context = await requireRole([Role.MEMBER, Role.STAFF, Role.SUPER_ADMIN]);
-  let target = "/member?paymentSubmitted=1";
+  let target = "/member/bookings?paymentSubmitted=1";
 
   try {
     const proofFile = formData.get("proofFile");
@@ -110,24 +111,26 @@ export async function submitPaymentProofAction(formData: FormData) {
 
     await submitPaymentProof(context.profile.id, parsed);
   } catch (error) {
-    target = `/member?error=${encodeURIComponent(getActionErrorMessage(error))}`;
+    target = `/member/bookings?error=${encodeURIComponent(getActionErrorMessage(error))}`;
   }
 
   revalidatePath("/member");
+  revalidatePath("/member/bookings");
   redirect(target);
 }
 
 export async function cancelBookingAction(formData: FormData) {
   const context = await requireRole([Role.MEMBER, Role.STAFF, Role.SUPER_ADMIN]);
-  let target = "/member?cancelled=1";
+  let target = "/member/bookings?cancelled=1";
 
   try {
     const bookingId = z.string().min(1).parse(formData.get("bookingId"));
     await cancelOwnPendingBooking(context.profile.id, bookingId);
   } catch (error) {
-    target = `/member?error=${encodeURIComponent(getActionErrorMessage(error))}`;
+    target = `/member/bookings?error=${encodeURIComponent(getActionErrorMessage(error))}`;
   }
 
   revalidatePath("/member");
+  revalidatePath("/member/bookings");
   redirect(target);
 }

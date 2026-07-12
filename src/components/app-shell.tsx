@@ -1,5 +1,5 @@
 import { Role } from "@prisma/client";
-import { Building2, CalendarClock, DoorOpen, LayoutDashboard, LogOut, ShieldCheck, UserCog } from "lucide-react";
+import { Building2, CalendarClock, CalendarDays, DoorOpen, LayoutDashboard, LogOut, ShieldCheck, UserCog } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
@@ -14,15 +14,21 @@ type AppShellProps = {
 };
 
 const navigation = {
-  [Role.MEMBER]: [{ href: "/dashboard", label: "Dashboard", icon: LayoutDashboard }, { href: "/member", label: "Book rooms", icon: CalendarClock }],
+  [Role.MEMBER]: [
+    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/member", label: "Book rooms", icon: CalendarClock },
+    { href: "/member/bookings", label: "My bookings", icon: CalendarDays },
+  ],
   [Role.STAFF]: [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/member", label: "Book rooms", icon: CalendarClock },
+    { href: "/member/bookings", label: "My bookings", icon: CalendarDays },
     { href: "/staff", label: "Staff review", icon: ShieldCheck },
   ],
   [Role.SUPER_ADMIN]: [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/member", label: "Book rooms", icon: CalendarClock },
+    { href: "/member/bookings", label: "My bookings", icon: CalendarDays },
     { href: "/staff", label: "Staff review", icon: ShieldCheck },
     { href: "/admin", label: "Rooms", icon: DoorOpen },
     { href: "/admin/users", label: "Users", icon: UserCog },

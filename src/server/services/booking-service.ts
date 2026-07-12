@@ -263,23 +263,6 @@ export async function listPendingReviewBookings(take = 25) {
   });
 }
 
-export async function listRecentBookings(take = 8) {
-  if (isDemoMode) {
-    return demoBookings.slice(0, take);
-  }
-
-  return prisma.booking.findMany({
-    include: {
-      member: true,
-      room: { include: { branch: true } },
-      payment: true,
-      checkin: true,
-    },
-    orderBy: { updatedAt: "desc" },
-    take,
-  });
-}
-
 export async function cancelOwnPendingBooking(memberId: string, bookingId: string) {
   if (isDemoMode) {
     const booking = getDemoBookingsForMember(memberId).find((item) => item.id === bookingId);
