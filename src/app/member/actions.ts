@@ -9,7 +9,7 @@ import { combineBranchDateTime } from "@/lib/branch-time";
 import { requireRole } from "@/server/guards";
 import { BookingConflictError, BookingValidationError, cancelOwnPendingBooking, createBooking } from "@/server/services/booking-service";
 import { submitPaymentProof } from "@/server/services/payment-service";
-import { uploadPaymentProof } from "@/server/services/upload-service";
+import { UploadValidationError, uploadPaymentProof } from "@/server/services/upload-service";
 import { createBookingSchema } from "@/server/validators/booking";
 import { submitPaymentProofSchema } from "@/server/validators/payment";
 
@@ -101,8 +101,12 @@ export async function submitPaymentProofAction(formData: FormData) {
 
   try {
     const proofFile = formData.get("proofFile");
-    const proofFileUrl =
-      proofFile instanceof File && proofFile.size > 0 ? await uploadPaymentProof(proofFile, context.profile.id) : formData.get("proofFileUrl");
+
+    if (!(proofFile instanceof File) || proofFile.size <= 0) {
+      throw new UploadValidationError("Payment proof file is required.");
+    }
+
+    const proofFileUrl = await uploadPaymentProof(proofFile, context.profile.id);
 
     const parsed = submitPaymentProofSchema.parse({
       bookingId: formData.get("bookingId"),

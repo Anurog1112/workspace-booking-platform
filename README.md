@@ -56,3 +56,7 @@ https://workspace-booking-platform.vercel.app/api/auth/callback/google
 ```
 
 ผู้ใช้ Google ใหม่จะได้รับ role `MEMBER` อัตโนมัติ ส่วนการกำหนด `STAFF` หรือ `SUPER_ADMIN` ต้องทำผ่านหน้า Super Admin เท่านั้น
+
+## Payment Proof Storage
+
+เมื่อกำหนด `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` และ `SUPABASE_STORAGE_BUCKET` ครบ ระบบจะเก็บสลิปใน Supabase Storage หากยังไม่ได้กำหนด ระบบจะใช้ PostgreSQL fallback สำหรับไฟล์ JPG, PNG, WEBP หรือ PDF ขนาดไม่เกิน 1MB เพื่อให้ payment review flow ใช้งานได้ในโครงการสาธิต

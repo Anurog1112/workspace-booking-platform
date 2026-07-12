@@ -7,9 +7,10 @@ import { reviewPaymentAction } from "@/app/staff/actions";
 import { BookingTimeline } from "@/components/booking-timeline";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { PageHeader } from "@/components/page-header";
+import { PaymentInstructions } from "@/components/payment-instructions";
 import { RoomVisual } from "@/components/room-visual";
 import { StatusBadge } from "@/components/status-badge";
-import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/submit-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -118,7 +119,7 @@ export default async function BookingDetailPage({ params }: BookingDetailPagePro
             </CardHeader>
             <CardContent className="space-y-4">
               {booking.payment?.proofFileUrl ? (
-                <a className="inline-flex items-center gap-2 text-sm font-medium text-primary" href={booking.payment.proofFileUrl} rel="noreferrer" target="_blank">
+                <a className="inline-flex items-center gap-2 text-sm font-medium text-primary" href={`/api/payment-proofs/${booking.id}`} rel="noreferrer" target="_blank">
                   Open uploaded proof
                   <ExternalLink className="h-4 w-4" aria-hidden="true" />
                 </a>
@@ -129,14 +130,16 @@ export default async function BookingDetailPage({ params }: BookingDetailPagePro
               {payableStatuses.has(booking.status) ? (
                 <form action={submitPaymentProofAction} className="space-y-3" encType="multipart/form-data">
                   <input name="bookingId" type="hidden" value={booking.id} />
+                  <PaymentInstructions amount={booking.totalPrice.toString()} />
                   <div className="space-y-2">
                     <Label htmlFor="proofFile">Upload proof</Label>
                     <Input accept="image/jpeg,image/png,image/webp,application/pdf" id="proofFile" name="proofFile" required type="file" />
+                    <p className="text-xs text-muted-foreground">JPG, PNG, WEBP, or PDF up to 1MB.</p>
                   </div>
-                  <Button className="w-full gap-2" type="submit" variant="secondary">
+                  <SubmitButton className="w-full gap-2" pendingLabel="Uploading proof..." variant="secondary">
                     <CreditCard className="h-4 w-4" aria-hidden="true" />
                     Submit proof
-                  </Button>
+                  </SubmitButton>
                 </form>
               ) : null}
             </CardContent>

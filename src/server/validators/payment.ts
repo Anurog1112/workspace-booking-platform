@@ -2,7 +2,10 @@ import { z } from "zod";
 
 export const submitPaymentProofSchema = z.object({
   bookingId: z.string().min(1),
-  proofFileUrl: z.string().url(),
+  proofFileUrl: z.string().refine(
+    (value) => /^https:\/\//.test(value) || /^data:(image\/(jpeg|png|webp)|application\/pdf);base64,/.test(value),
+    "Payment proof location is invalid.",
+  ),
 });
 
 export const reviewPaymentSchema = z

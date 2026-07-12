@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { isDemoMode } from "@/lib/demo-mode";
 import { createSupabaseAdminClient } from "@/lib/supabase";
 
-const MAX_PAYMENT_PROOF_SIZE = 5 * 1024 * 1024;
+const MAX_PAYMENT_PROOF_SIZE = 1 * 1024 * 1024;
 const allowedPaymentProofTypes = new Map([
   ["image/jpeg", "jpg"],
   ["image/png", "png"],
@@ -24,7 +24,7 @@ export async function uploadPaymentProof(file: File, profileId: string) {
   }
 
   if (file.size > MAX_PAYMENT_PROOF_SIZE) {
-    throw new UploadValidationError("Payment proof file must be 5MB or smaller.");
+    throw new UploadValidationError("Payment proof file must be 1MB or smaller.");
   }
 
   const extension = allowedPaymentProofTypes.get(file.type);
@@ -33,6 +33,7 @@ export async function uploadPaymentProof(file: File, profileId: string) {
     throw new UploadValidationError("Payment proof must be a JPG, PNG, WEBP, or PDF file.");
   }
 
+  const buffer = Buffer.from(await file.arrayBuffer());
   const objectPath = `payment-proofs/${profileId}/${randomUUID()}.${extension}`;
 
   if (isDemoMode) {
@@ -40,13 +41,13 @@ export async function uploadPaymentProof(file: File, profileId: string) {
   }
 
   const bucket = process.env.SUPABASE_STORAGE_BUCKET;
+  const hasStorageConfig = Boolean(bucket && process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
 
-  if (!bucket) {
-    throw new UploadValidationError("Storage bucket is not configured.");
+  if (!hasStorageConfig || !bucket) {
+    return `data:${file.type};base64,${buffer.toString("base64")}`;
   }
 
   const supabase = createSupabaseAdminClient();
-  const buffer = Buffer.from(await file.arrayBuffer());
   const { error } = await supabase.storage.from(bucket).upload(objectPath, buffer, {
     contentType: file.type,
     upsert: false,

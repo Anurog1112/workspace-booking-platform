@@ -7,6 +7,7 @@ import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { EmptyState } from "@/components/empty-state";
 import { Notice } from "@/components/notice";
 import { PageHeader } from "@/components/page-header";
+import { PaymentInstructions } from "@/components/payment-instructions";
 import { StatusBadge } from "@/components/status-badge";
 import { SubmitButton } from "@/components/submit-button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -73,9 +74,11 @@ export default async function MemberBookingsPage({ searchParams }: { searchParam
                 {payableStatuses.has(booking.status) ? (
                   <form action={submitPaymentProofAction} className="space-y-3" encType="multipart/form-data">
                     <input name="bookingId" type="hidden" value={booking.id} />
+                    <PaymentInstructions amount={booking.totalPrice.toString()} />
                     <div className="space-y-2">
                       <Label htmlFor={`proof-${booking.id}`}>Payment proof</Label>
                       <Input accept="image/jpeg,image/png,image/webp,application/pdf" id={`proof-${booking.id}`} name="proofFile" required type="file" />
+                      <p className="text-xs text-muted-foreground">JPG, PNG, WEBP, or PDF up to 1MB.</p>
                     </div>
                     <SubmitButton className="w-full" pendingLabel="Uploading proof..." variant="secondary">
                       <CreditCard className="mr-2 h-4 w-4" aria-hidden="true" />

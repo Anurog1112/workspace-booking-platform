@@ -102,7 +102,7 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
               {booking.payment?.proofFileUrl && (
                 <a
                   className="inline-flex items-center gap-2 text-sm font-medium text-primary"
-                  href={booking.payment.proofFileUrl}
+                  href={`/api/payment-proofs/${booking.id}`}
                   rel="noreferrer"
                   target="_blank"
                 >
