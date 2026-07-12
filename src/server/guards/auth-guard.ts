@@ -1,8 +1,7 @@
-import type { Profile, Role } from "@prisma/client";
+import type { Role } from "@prisma/client";
 
 import { auth } from "@/lib/auth";
 import { getDemoProfileByUserId, isDemoMode } from "@/lib/demo-mode";
-import { prisma } from "@/lib/prisma";
 
 export class AuthRequiredError extends Error {
   constructor() {
@@ -20,7 +19,11 @@ export class ForbiddenError extends Error {
 
 export type AuthContext = {
   userId: string;
-  profile: Profile;
+  profile: {
+    id: string;
+    userId: string;
+    role: Role;
+  };
 };
 
 export async function requireAuth(): Promise<AuthContext> {
@@ -43,21 +46,21 @@ export async function requireAuth(): Promise<AuthContext> {
     };
   }
 
-  const profile = await prisma.profile.findUnique({
-    where: { userId: session.user.id },
-  });
-
-  if (!profile) {
+  if (!session.user.profileId || !session.user.role) {
     throw new AuthRequiredError();
   }
 
   return {
     userId: session.user.id,
-    profile,
+    profile: {
+      id: session.user.profileId,
+      userId: session.user.id,
+      role: session.user.role,
+    },
   };
 }
 
-export function assertRole(profile: Pick<Profile, "role">, allowedRoles: Role[]) {
+export function assertRole(profile: { role: Role }, allowedRoles: Role[]) {
   if (!allowedRoles.includes(profile.role)) {
     throw new ForbiddenError();
   }

@@ -7,7 +7,7 @@ import { EmptyState } from "@/components/empty-state";
 import { Notice } from "@/components/notice";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
-import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/submit-button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -169,9 +169,9 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                     ))}
                   </div>
                 </div>
-                <Button className="w-full" type="submit">
+                <SubmitButton className="w-full" pendingLabel="Creating room...">
                   Create room
-                </Button>
+                </SubmitButton>
               </form>
             </CardContent>
           </Card>
@@ -193,9 +193,9 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                   <Label htmlFor="amenityIcon">Icon text</Label>
                   <Input id="amenityIcon" name="icon" placeholder="optional" />
                 </div>
-                <Button className="w-full" type="submit" variant="secondary">
+                <SubmitButton className="w-full" pendingLabel="Adding amenity..." variant="secondary">
                   Add amenity
-                </Button>
+                </SubmitButton>
               </form>
             </CardContent>
           </Card>

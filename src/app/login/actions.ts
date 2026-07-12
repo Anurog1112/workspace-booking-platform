@@ -45,3 +45,7 @@ export async function loginAction(formData: FormData) {
     redirect("/login?error=ServerError");
   }
 }
+
+export async function googleLoginAction() {
+  await signIn("google", { redirectTo: "/dashboard" });
+}

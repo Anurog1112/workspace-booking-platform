@@ -7,7 +7,7 @@ import { z } from "zod";
 
 import { combineBranchDateTime } from "@/lib/branch-time";
 import { requireRole } from "@/server/guards";
-import { cancelOwnPendingBooking, createBooking } from "@/server/services/booking-service";
+import { BookingConflictError, BookingValidationError, cancelOwnPendingBooking, createBooking } from "@/server/services/booking-service";
 import { submitPaymentProof } from "@/server/services/payment-service";
 import { uploadPaymentProof } from "@/server/services/upload-service";
 import { createBookingSchema } from "@/server/validators/booking";
@@ -39,13 +39,19 @@ function getBookingDateRange(formData: FormData) {
   };
 }
 
-export async function createBookingAction(formData: FormData) {
+export type CreateBookingActionState = {
+  status: "idle" | "success" | "error";
+  message?: string;
+  bookingId?: string;
+  fieldErrors?: Partial<Record<"bookingDate" | "startTime" | "endTime" | "attendeeCount" | "purpose", string[]>>;
+};
+
+export async function createBookingAction(_previousState: CreateBookingActionState, formData: FormData): Promise<CreateBookingActionState> {
   const context = await requireRole([Role.MEMBER, Role.STAFF, Role.SUPER_ADMIN]);
-  let target = "/member?created=1";
 
   try {
     const dateRange = getBookingDateRange(formData);
-    const parsed = createBookingSchema.parse({
+    const parsed = createBookingSchema.safeParse({
       roomId: formData.get("roomId"),
       startAt: dateRange.startAt,
       endAt: dateRange.endAt,
@@ -53,13 +59,39 @@ export async function createBookingAction(formData: FormData) {
       purpose: formData.get("purpose") || undefined,
     });
 
-    await createBooking(context.profile.id, parsed);
-  } catch (error) {
-    target = `/member?error=${encodeURIComponent(getActionErrorMessage(error))}`;
-  }
+    if (!parsed.success) {
+      const errors = parsed.error.flatten().fieldErrors;
 
-  revalidatePath("/member");
-  redirect(target);
+      return {
+        status: "error",
+        message: "Please check the highlighted booking details.",
+        fieldErrors: {
+          bookingDate: errors.startAt,
+          startTime: errors.startAt,
+          endTime: errors.endAt,
+          attendeeCount: errors.attendeeCount,
+          purpose: errors.purpose,
+        },
+      };
+    }
+
+    const booking = await createBooking(context.profile.id, parsed.data);
+    revalidatePath("/member");
+    revalidatePath("/dashboard");
+
+    return {
+      status: "success",
+      message: "Your room is reserved. Complete payment before the deadline to keep this booking.",
+      bookingId: booking.id,
+    };
+  } catch (error) {
+    if (error instanceof BookingValidationError || error instanceof BookingConflictError) {
+      return { status: "error", message: error.message };
+    }
+
+    console.error("Booking creation failed.", error);
+    return { status: "error", message: "Booking could not be completed. Please try again." };
+  }
 }
 
 export async function submitPaymentProofAction(formData: FormData) {

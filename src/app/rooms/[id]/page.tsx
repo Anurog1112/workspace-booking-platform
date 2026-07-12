@@ -1,17 +1,14 @@
 import { Role } from "@prisma/client";
-import { CalendarPlus, Clock, Users } from "lucide-react";
+import { Clock, Users } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { createBookingAction } from "@/app/member/actions";
+import { BookingForm } from "@/components/booking-form";
 import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
 import { RoomVisual } from "@/components/room-visual";
 import { StatusBadge } from "@/components/status-badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { auth } from "@/lib/auth";
 import { buildHourlyTimeOptions, formatBranchTime } from "@/lib/branch-time";
 import { listUpcomingBookingsForRoom } from "@/server/services/booking-service";
@@ -19,6 +16,7 @@ import { getRoomById } from "@/server/services/room-service";
 
 type RoomDetailPageProps = {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ bookingDate?: string; startTime?: string; endTime?: string }>;
 };
 
 function formatDateTime(date: Date) {
@@ -36,8 +34,9 @@ function getDefaultBookingDate() {
   return date.toISOString().slice(0, 10);
 }
 
-export default async function RoomDetailPage({ params }: RoomDetailPageProps) {
+export default async function RoomDetailPage({ params, searchParams }: RoomDetailPageProps) {
   const { id } = await params;
+  const bookingDefaults = await searchParams;
   const [room, bookings, session] = await Promise.all([getRoomById(id), listUpcomingBookingsForRoom(id), auth()]);
 
   if (!room) {
@@ -45,6 +44,7 @@ export default async function RoomDetailPage({ params }: RoomDetailPageProps) {
   }
 
   const canBook = Boolean(session?.user?.role && [Role.MEMBER, Role.STAFF, Role.SUPER_ADMIN].includes(session.user.role));
+  const timeOptions = buildHourlyTimeOptions(room.branch.openingTime, room.branch.closingTime);
 
   return (
     <div>
@@ -128,49 +128,16 @@ export default async function RoomDetailPage({ params }: RoomDetailPageProps) {
             </CardHeader>
             <CardContent>
               {canBook ? (
-                <form action={createBookingAction} className="space-y-4">
-                  <input name="roomId" type="hidden" value={room.id} />
-                  <div className="space-y-2">
-                    <Label htmlFor="bookingDate">Date</Label>
-                    <Input defaultValue={getDefaultBookingDate()} id="bookingDate" name="bookingDate" required type="date" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="startTime">Start</Label>
-                    <select className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm" defaultValue="09:00" id="startTime" name="startTime" required>
-                      {buildHourlyTimeOptions(room.branch.openingTime, room.branch.closingTime)
-                        .slice(0, -1)
-                        .map((time) => (
-                          <option key={time} value={time}>
-                            {time}
-                          </option>
-                        ))}
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="endTime">End</Label>
-                    <select className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm" defaultValue="10:00" id="endTime" name="endTime" required>
-                      {buildHourlyTimeOptions(room.branch.openingTime, room.branch.closingTime)
-                        .slice(1)
-                        .map((time) => (
-                          <option key={time} value={time}>
-                            {time}
-                          </option>
-                        ))}
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="attendeeCount">Attendees</Label>
-                    <Input id="attendeeCount" max={room.capacity} min="1" name="attendeeCount" required type="number" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="purpose">Purpose</Label>
-                    <Input id="purpose" name="purpose" placeholder="Project meeting" />
-                  </div>
-                  <Button className="w-full gap-2" type="submit">
-                    <CalendarPlus className="h-4 w-4" aria-hidden="true" />
-                    Book room
-                  </Button>
-                </form>
+                <BookingForm
+                  capacity={room.capacity}
+                  defaultDate={bookingDefaults.bookingDate ?? getDefaultBookingDate()}
+                  defaultEndTime={bookingDefaults.endTime}
+                  defaultStartTime={bookingDefaults.startTime}
+                  hourlyRate={Number(room.hourlyRate)}
+                  roomId={room.id}
+                  roomName={room.name}
+                  timeOptions={timeOptions}
+                />
               ) : (
                 <div className="space-y-4">
                   <p className="text-sm text-muted-foreground">Sign in before creating a booking.</p>

@@ -4,7 +4,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { logoutAction } from "@/app/actions";
-import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/submit-button";
 import { StatusBadge } from "@/components/status-badge";
 import type { Session } from "next-auth";
 
@@ -66,10 +66,10 @@ export function AppShell({ children, session }: AppShellProps) {
             </div>
             <div className="flex h-9 w-9 items-center justify-center rounded-md bg-muted text-sm font-semibold">{userInitial}</div>
             <form action={logoutAction}>
-              <Button className="h-9 gap-2 px-3" type="submit" variant="secondary">
+              <SubmitButton className="h-9 gap-2 px-3" pendingLabel="Signing out..." variant="secondary">
                 <LogOut className="h-4 w-4" aria-hidden="true" />
                 <span className="hidden sm:inline">Logout</span>
-              </Button>
+              </SubmitButton>
             </form>
           </div>
         </div>

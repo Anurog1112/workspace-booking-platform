@@ -1,5 +1,5 @@
 import { BookingStatus, Role } from "@prisma/client";
-import { CalendarPlus, CreditCard, Search, DoorOpen } from "lucide-react";
+import { CreditCard, DoorOpen } from "lucide-react";
 import Link from "next/link";
 
 import { EmptyState } from "@/components/empty-state";
@@ -7,18 +7,19 @@ import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { Notice } from "@/components/notice";
 import { PageHeader } from "@/components/page-header";
 import { RoomVisual } from "@/components/room-visual";
+import { RoomSearchForm } from "@/components/room-search-form";
 import { StatusBadge } from "@/components/status-badge";
-import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/submit-button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { buildHourlyTimeOptions, combineBranchDateTime, formatBranchTime } from "@/lib/branch-time";
+import { combineBranchDateTime, formatBranchTime } from "@/lib/branch-time";
 import { requireRole } from "@/server/guards";
 import { listBookingsForMember } from "@/server/services/booking-service";
 import { listBranches, listRooms } from "@/server/services/room-service";
 import { roomSearchSchema } from "@/server/validators/room";
 
-import { cancelBookingAction, createBookingAction, submitPaymentProofAction } from "./actions";
+import { cancelBookingAction, submitPaymentProofAction } from "./actions";
 
 type MemberSearchParams = Promise<{
   branchId?: string;
@@ -81,7 +82,7 @@ export default async function MemberPage({ searchParams }: { searchParams: Membe
     endAt: dateRange.endAt || undefined,
   });
   const filters = parsedFilters.success ? parsedFilters.data : {};
-  const [branches, rooms, bookings] = await Promise.all([listBranches(), listRooms(filters), listBookingsForMember(context.profile.id)]);
+  const [branches, rooms, bookings] = await Promise.all([listBranches(), listRooms(filters), listBookingsForMember(context.profile.id, 12)]);
   const defaultBookingDate = params.bookingDate ?? getDefaultBookingDate();
   const searchTimeOptions = getSearchTimeOptions();
   const notice = params.error
@@ -106,64 +107,21 @@ export default async function MemberPage({ searchParams }: { searchParams: Membe
 
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Search className="h-5 w-5 text-primary" aria-hidden="true" />
-            Search availability
-          </CardTitle>
-          <CardDescription>Filtering by time also excludes rooms with blocking bookings.</CardDescription>
+          <CardTitle>Search availability</CardTitle>
+          <CardDescription>Choose your group size and time first. Only available rooms will be shown.</CardDescription>
         </CardHeader>
         <CardContent>
-          <form className="grid gap-4 md:grid-cols-6" method="get">
-            <div className="space-y-2">
-              <Label htmlFor="branchId">Branch</Label>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm"
-                defaultValue={params.branchId ?? ""}
-                id="branchId"
-                name="branchId"
-              >
-                <option value="">All</option>
-                {branches.map((branch) => (
-                  <option key={branch.id} value={branch.id}>
-                    {branch.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="capacity">Seats</Label>
-              <Input defaultValue={params.capacity} id="capacity" min="1" name="capacity" type="number" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="bookingDate">Date</Label>
-              <Input defaultValue={defaultBookingDate} id="bookingDate" name="bookingDate" type="date" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="startTime">Start</Label>
-              <select className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm" defaultValue={params.startTime ?? "09:00"} id="startTime" name="startTime">
-                {searchTimeOptions.slice(0, -1).map((time) => (
-                  <option key={time} value={time}>
-                    {time}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="endTime">End</Label>
-              <select className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm" defaultValue={params.endTime ?? "10:00"} id="endTime" name="endTime">
-                {searchTimeOptions.slice(1).map((time) => (
-                  <option key={time} value={time}>
-                    {time}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex items-end">
-              <Button className="w-full" type="submit">
-                Search
-              </Button>
-            </div>
-          </form>
+          <RoomSearchForm
+            branches={branches.map(({ id, name }) => ({ id, name }))}
+            defaults={{
+              branchId: params.branchId ?? "",
+              capacity: params.capacity ?? "1",
+              bookingDate: defaultBookingDate,
+              startTime: params.startTime ?? "09:00",
+              endTime: params.endTime ?? "10:00",
+            }}
+            timeOptions={searchTimeOptions}
+          />
         </CardContent>
       </Card>
 
@@ -188,7 +146,7 @@ export default async function MemberPage({ searchParams }: { searchParams: Membe
                       {room.branch.name} / {room.capacity} seats / {room.hourlyRate.toString()} THB/hour
                     </CardDescription>
                   </div>
-                  <Link className="text-sm font-medium text-primary" href={`/rooms/${room.id}`}>
+                  <Link className="text-sm font-medium text-primary" href={`/rooms/${room.id}?bookingDate=${defaultBookingDate}&startTime=${params.startTime ?? "09:00"}&endTime=${params.endTime ?? "10:00"}`}>
                     Details
                   </Link>
                 </CardHeader>
@@ -207,49 +165,12 @@ export default async function MemberPage({ searchParams }: { searchParams: Membe
                       </span>
                     ))}
                   </div>
-                  <form action={createBookingAction} className="grid gap-3 md:grid-cols-2">
-                    <input name="roomId" type="hidden" value={room.id} />
-                    <div className="space-y-2">
-                      <Label htmlFor={`booking-date-${room.id}`}>Date</Label>
-                      <Input defaultValue={defaultBookingDate} id={`booking-date-${room.id}`} name="bookingDate" required type="date" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor={`attendee-${room.id}`}>Attendees</Label>
-                      <Input id={`attendee-${room.id}`} max={room.capacity} min="1" name="attendeeCount" required type="number" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor={`booking-start-${room.id}`}>Start</Label>
-                      <select className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm" defaultValue={params.startTime ?? "09:00"} id={`booking-start-${room.id}`} name="startTime" required>
-                        {buildHourlyTimeOptions(room.branch.openingTime, room.branch.closingTime)
-                          .slice(0, -1)
-                          .map((time) => (
-                            <option key={time} value={time}>
-                              {time}
-                            </option>
-                          ))}
-                      </select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor={`booking-end-${room.id}`}>End</Label>
-                      <select className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm" defaultValue={params.endTime ?? "10:00"} id={`booking-end-${room.id}`} name="endTime" required>
-                        {buildHourlyTimeOptions(room.branch.openingTime, room.branch.closingTime)
-                          .slice(1)
-                          .map((time) => (
-                            <option key={time} value={time}>
-                              {time}
-                            </option>
-                          ))}
-                      </select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor={`purpose-${room.id}`}>Purpose</Label>
-                      <Input id={`purpose-${room.id}`} name="purpose" placeholder="Workshop, client meeting" />
-                    </div>
-                    <Button className="md:col-span-2" type="submit">
-                      <CalendarPlus className="mr-2 h-4 w-4" aria-hidden="true" />
-                      Book room
-                    </Button>
-                  </form>
+                  <Link
+                    className="inline-flex h-10 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground hover:bg-teal-800"
+                    href={`/rooms/${room.id}?bookingDate=${defaultBookingDate}&startTime=${params.startTime ?? "09:00"}&endTime=${params.endTime ?? "10:00"}`}
+                  >
+                    Choose this room
+                  </Link>
                 </CardContent>
               </Card>
             ))
@@ -292,10 +213,10 @@ export default async function MemberPage({ searchParams }: { searchParams: Membe
                         <Label htmlFor={`proof-${booking.id}`}>Payment proof</Label>
                         <Input accept="image/jpeg,image/png,image/webp,application/pdf" id={`proof-${booking.id}`} name="proofFile" required type="file" />
                       </div>
-                      <Button className="w-full" type="submit" variant="secondary">
+                      <SubmitButton className="w-full" pendingLabel="Uploading proof..." variant="secondary">
                         <CreditCard className="mr-2 h-4 w-4" aria-hidden="true" />
                         Submit proof
-                      </Button>
+                      </SubmitButton>
                     </form>
                   )}
 

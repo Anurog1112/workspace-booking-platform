@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { Building2, CalendarCheck, CreditCard, ShieldCheck } from "lucide-react";
 
 import { auth } from "@/lib/auth";
@@ -47,12 +48,16 @@ export default async function HomePage() {
             ))}
           </div>
         </div>
-        <div
-          aria-label="Modern meeting room workspace"
-          className="h-80 overflow-hidden rounded-lg border bg-card bg-cover bg-center shadow-sm lg:h-[520px]"
-          role="img"
-          style={{ backgroundImage: "url(https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1200&q=80)" }}
-        />
+        <div className="relative h-80 overflow-hidden rounded-lg border bg-card shadow-sm lg:h-[520px]">
+          <Image
+            alt="Modern meeting room workspace"
+            className="object-cover"
+            fill
+            priority
+            sizes="(max-width: 1024px) 100vw, 520px"
+            src="https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1200&q=78"
+          />
+        </div>
       </section>
     </main>
   );

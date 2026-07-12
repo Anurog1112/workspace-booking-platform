@@ -1,11 +1,12 @@
 import { Building2, LogIn } from "lucide-react";
 import Link from "next/link";
 
-import { loginAction } from "@/app/login/actions";
-import { Button } from "@/components/ui/button";
+import { googleLoginAction, loginAction } from "@/app/login/actions";
+import { SubmitButton } from "@/components/submit-button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { isGoogleAuthEnabled } from "@/lib/auth";
 
 type LoginPageProps = {
   searchParams?: Promise<{
@@ -43,11 +44,26 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             {registered ? <p className="rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-700">Account created. Sign in to continue.</p> : null}
             {hasError ? <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">Invalid email or password.</p> : null}
             {hasServerError ? <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">Sign in failed because the server could not verify your account. Please try again.</p> : null}
-            <Button className="w-full gap-2" type="submit">
+            <SubmitButton className="w-full gap-2" pendingLabel="Signing in...">
               <LogIn className="h-4 w-4" aria-hidden="true" />
               Sign in
-            </Button>
+            </SubmitButton>
           </form>
+          {isGoogleAuthEnabled ? (
+            <>
+              <div className="my-5 flex items-center gap-3 text-xs uppercase text-muted-foreground">
+                <span className="h-px flex-1 bg-border" />
+                or
+                <span className="h-px flex-1 bg-border" />
+              </div>
+              <form action={googleLoginAction}>
+                <SubmitButton className="w-full gap-2" pendingLabel="Connecting to Google..." variant="secondary">
+                  <span className="flex h-5 w-5 items-center justify-center rounded-sm border bg-white text-xs font-bold text-blue-600">G</span>
+                  Continue with Google
+                </SubmitButton>
+              </form>
+            </>
+          ) : null}
           <p className="mt-4 text-center text-sm text-muted-foreground">
             New member?{" "}
             <Link className="font-medium text-primary" href="/register">

@@ -26,5 +26,6 @@ export async function reviewPaymentAction(formData: FormData) {
   }
 
   revalidatePath("/staff");
+  revalidatePath("/dashboard");
   redirect(target);
 }

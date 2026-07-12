@@ -1,4 +1,4 @@
-import { PaymentStatus, Role } from "@prisma/client";
+import { Role } from "@prisma/client";
 import { Check, ExternalLink, X } from "lucide-react";
 import Link from "next/link";
 
@@ -11,7 +11,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { requireRole } from "@/server/guards";
-import { listAllBookings } from "@/server/services/booking-service";
+import { listPendingReviewBookings, listRecentBookings } from "@/server/services/booking-service";
+import { getPaymentReviewCounts } from "@/server/services/payment-service";
 
 import { reviewPaymentAction } from "./actions";
 
@@ -33,9 +34,11 @@ function formatDateTime(date: Date) {
 export default async function StaffPage({ searchParams }: StaffPageProps) {
   await requireRole([Role.STAFF, Role.SUPER_ADMIN]);
   const params = await searchParams;
-  const bookings = await listAllBookings();
-  const pendingReviews = bookings.filter((booking) => booking.payment?.status === PaymentStatus.PENDING_REVIEW);
-  const otherBookings = bookings.filter((booking) => booking.payment?.status !== PaymentStatus.PENDING_REVIEW).slice(0, 8);
+  const [pendingReviews, otherBookings, reviewCounts] = await Promise.all([
+    listPendingReviewBookings(),
+    listRecentBookings(),
+    getPaymentReviewCounts(),
+  ]);
   const notice = params?.error
     ? { type: "error" as const, message: decodeURIComponent(params.error) }
     : params?.reviewed
@@ -61,13 +64,13 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>{bookings.filter((booking) => booking.payment?.status === PaymentStatus.APPROVED).length}</CardTitle>
+            <CardTitle>{reviewCounts.approved}</CardTitle>
             <CardDescription>Approved payments</CardDescription>
           </CardHeader>
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>{bookings.filter((booking) => booking.payment?.status === PaymentStatus.REJECTED).length}</CardTitle>
+            <CardTitle>{reviewCounts.rejected}</CardTitle>
             <CardDescription>Rejected payments</CardDescription>
           </CardHeader>
         </Card>

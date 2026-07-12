@@ -155,7 +155,7 @@ export async function createBooking(memberId: string, input: CreateBookingInput)
   });
 }
 
-export async function listBookingsForMember(memberId: string) {
+export async function listBookingsForMember(memberId: string, take?: number) {
   if (isDemoMode) {
     return getDemoBookingsForMember(memberId);
   }
@@ -172,6 +172,7 @@ export async function listBookingsForMember(memberId: string) {
       checkin: true,
     },
     orderBy: { startAt: "desc" },
+    ...(take ? { take } : {}),
   });
 }
 
@@ -241,6 +242,41 @@ export async function listAllBookings() {
       checkin: true,
     },
     orderBy: { startAt: "desc" },
+  });
+}
+
+export async function listPendingReviewBookings(take = 25) {
+  if (isDemoMode) {
+    return demoBookings.filter((booking) => booking.payment?.status === PaymentStatus.PENDING_REVIEW).slice(0, take);
+  }
+
+  return prisma.booking.findMany({
+    where: { payment: { is: { status: PaymentStatus.PENDING_REVIEW } } },
+    include: {
+      member: true,
+      room: { include: { branch: true } },
+      payment: true,
+      checkin: true,
+    },
+    orderBy: { updatedAt: "asc" },
+    take,
+  });
+}
+
+export async function listRecentBookings(take = 8) {
+  if (isDemoMode) {
+    return demoBookings.slice(0, take);
+  }
+
+  return prisma.booking.findMany({
+    include: {
+      member: true,
+      room: { include: { branch: true } },
+      payment: true,
+      checkin: true,
+    },
+    orderBy: { updatedAt: "desc" },
+    take,
   });
 }
 

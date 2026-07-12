@@ -99,4 +99,4 @@ SUPABASE_SERVICE_ROLE_KEY=
 SUPABASE_STORAGE_BUCKET=
 ```
 
-หมายเหตุ: ถ้าเริ่มด้วย Credentials provider อาจยังไม่ต้องใช้ Google OAuth ใน MVP
+Google OAuth ใช้ Auth.js Google provider และ Prisma adapter ผู้ใช้ใหม่จะถูกสร้าง `Profile` ด้วย role `MEMBER` อัตโนมัติ ส่วน role ที่สูงกว่าต้องกำหนดโดย `SUPER_ADMIN`

@@ -1,14 +1,22 @@
 import { PrismaAdapter } from "@auth/prisma-adapter";
+import { Role } from "@prisma/client";
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
+import Google from "next-auth/providers/google";
+import { cache } from "react";
 
 import { getDemoAuthUser, getDemoUserByEmail, getDemoUserById, isDemoMode } from "@/lib/demo-mode";
 import { prisma } from "@/lib/prisma";
 import { verifyPassword } from "@/lib/password";
 import { signInSchema } from "@/server/validators/auth";
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
+const googleClientId = process.env.GOOGLE_CLIENT_ID;
+const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
+const ROLE_REFRESH_INTERVAL_MS = 5 * 60 * 1000;
+
+const nextAuth = NextAuth({
   adapter: isDemoMode ? undefined : PrismaAdapter(prisma),
+  trustHost: true,
   session: {
     strategy: "jwt",
   },
@@ -52,10 +60,38 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           email: user.email,
           name: user.name ?? user.profile?.fullName ?? user.email,
           image: user.image,
+          profileId: user.profile?.id,
+          role: user.profile?.role,
         };
       },
     }),
+    ...(googleClientId && googleClientSecret
+      ? [
+          Google({
+            clientId: googleClientId,
+            clientSecret: googleClientSecret,
+            allowDangerousEmailAccountLinking: true,
+          }),
+        ]
+      : []),
   ],
+  events: {
+    async createUser({ user }) {
+      if (isDemoMode || !user.id) {
+        return;
+      }
+
+      await prisma.profile.upsert({
+        where: { userId: user.id },
+        update: {},
+        create: {
+          userId: user.id,
+          fullName: user.name ?? user.email ?? "Workspace member",
+          role: Role.MEMBER,
+        },
+      });
+    },
+  },
   callbacks: {
     async jwt({ token, user }) {
       const userId = user?.id ?? token.sub;
@@ -70,18 +106,34 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.sub = demoUser?.userId ?? userId;
         token.profileId = demoUser?.profileId;
         token.role = demoUser?.role;
+        token.roleCheckedAt = Date.now();
 
         return token;
       }
 
-      const profile = await prisma.profile.findUnique({
-        where: { userId },
-        select: { id: true, role: true },
-      });
+      if (user?.profileId && user.role) {
+        token.sub = userId;
+        token.profileId = user.profileId;
+        token.role = user.role;
+        token.roleCheckedAt = Date.now();
+
+        return token;
+      }
+
+      const roleIsStale = !token.roleCheckedAt || Date.now() - token.roleCheckedAt > ROLE_REFRESH_INTERVAL_MS;
+
+      if (!token.profileId || !token.role || roleIsStale) {
+        const profile = await prisma.profile.findUnique({
+          where: { userId },
+          select: { id: true, role: true },
+        });
+
+        token.profileId = profile?.id;
+        token.role = profile?.role;
+        token.roleCheckedAt = Date.now();
+      }
 
       token.sub = userId;
-      token.profileId = profile?.id;
-      token.role = profile?.role;
 
       return token;
     },
@@ -96,3 +148,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
   },
 });
+
+export const { handlers, signIn, signOut } = nextAuth;
+export const auth = cache(nextAuth.auth);
+
+export const isGoogleAuthEnabled = Boolean(googleClientId && googleClientSecret);

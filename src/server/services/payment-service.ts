@@ -11,6 +11,29 @@ export class PaymentValidationError extends Error {
   }
 }
 
+export async function getPaymentReviewCounts() {
+  if (isDemoMode) {
+    return {
+      pending: 1,
+      approved: 1,
+      rejected: 0,
+    };
+  }
+
+  const counts = await prisma.payment.groupBy({
+    by: ["status"],
+    where: { status: { in: [PaymentStatus.PENDING_REVIEW, PaymentStatus.APPROVED, PaymentStatus.REJECTED] } },
+    _count: { _all: true },
+  });
+  const getCount = (status: PaymentStatus) => counts.find((item) => item.status === status)?._count._all ?? 0;
+
+  return {
+    pending: getCount(PaymentStatus.PENDING_REVIEW),
+    approved: getCount(PaymentStatus.APPROVED),
+    rejected: getCount(PaymentStatus.REJECTED),
+  };
+}
+
 export async function submitPaymentProof(memberId: string, input: SubmitPaymentProofInput) {
   if (isDemoMode) {
     return submitDemoPaymentProof(memberId, input);
